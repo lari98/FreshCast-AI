@@ -14,6 +14,7 @@ import { MarkdownTab } from "./MarkdownTab";
 import { SettingsTab } from "./SettingsTab";
 import type { Theme } from "./SettingsTab";
 import { StoresTab } from "./StoresTab";
+import { PRESETS, availableCurrencies, availableMarkets, filterMarkets, presetFor } from "@/lib/markets";
 import { COST_SHARE } from "@/lib/kpi";
 import type { ItemMetrics } from "@/lib/kpi";
 import { decide, parseWorkflow, setQuantity, setReason, submit } from "@/lib/workflow";
@@ -68,6 +69,9 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   const [costShare, setCostShare] = useState(COST_SHARE);
   const [theme, setTheme] = useState<Theme>("auto");
   const [restored, setRestored] = useState(false);
+  // null = no restriction (all markets / all currencies in the data)
+  const [marketSel, setMarketSel] = useState<string[] | null>(null);
+  const [currencySel, setCurrencySel] = useState<string[] | null>(null);
   const [tab, setTab] = useState<TabId>("overview");
   const t = STRINGS[lang];
 
@@ -121,14 +125,33 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
     }
   }
 
+  const allItems = useMemo(() => data?.items ?? [], [data]);
+  const markets = useMemo(() => availableMarkets(allItems), [allItems]);
+  const currencies = useMemo(() => availableCurrencies(allItems), [allItems]);
+  const selMarkets = useMemo(() => new Set(marketSel ?? markets), [marketSel, markets]);
+  const selCurrencies = useMemo(() => new Set(currencySel ?? currencies), [currencySel, currencies]);
+  const marketItems = useMemo(
+    () => filterMarkets(allItems, selMarkets, selCurrencies),
+    [allItems, selMarkets, selCurrencies],
+  );
   const stores = useMemo(
-    () => [...new Map((data?.items ?? []).map((i) => [i.store_id, i.city])).entries()],
-    [data],
+    () => [...new Map(marketItems.map((i) => [i.store_id, i.city])).entries()],
+    [marketItems],
   );
+  // A store that the market filter hides can no longer be the active scope.
+  const activeStore = stores.some(([id]) => id === store) ? store : "";
   const scope = useMemo(
-    () => (data?.items ?? []).filter((i) => !store || i.store_id === store),
-    [data, store],
+    () => marketItems.filter((i) => !activeStore || i.store_id === activeStore),
+    [marketItems, activeStore],
   );
+  const preset = presetFor(selMarkets, markets);
+  const nothingSelected = allItems.length > 0 && marketItems.length === 0;
+  const toggle = (list: string[], all: string[], value: string) => {
+    const next = new Set(list);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return all.filter((x) => next.has(x));
+  };
   const metrics = useMemo(() => scope.map((i) => itemMetrics(i, costShare)), [scope, costShare]);
   const item = scope.find((i) => itemKey(i) === selected) ?? scope[0];
   const key = item ? itemKey(item) : "";
@@ -161,6 +184,9 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
           if (typeof raw.costShare === "number" && raw.costShare >= 0.4 && raw.costShare <= 0.8) setCostShare(raw.costShare);
           if (["auto", "light", "dark"].includes(raw.theme)) setTheme(raw.theme);
           if (raw.role === "reviewer" || raw.role === "planner") setRole(raw.role);
+          const strings = (v: unknown) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : null);
+          setMarketSel(strings(raw.markets));
+          setCurrencySel(strings(raw.currencies));
           setWorkflow(parseWorkflow(raw.workflow));
         }
       } catch {
@@ -174,12 +200,12 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ costShare, theme, role, workflow: data?.source === "upload" ? {} : workflow }),
+        JSON.stringify({ costShare, theme, role, markets: marketSel, currencies: currencySel, workflow: data?.source === "upload" ? {} : workflow }),
       );
     } catch {
       /* Not persisted; the page still works. */
     }
-  }, [restored, costShare, theme, role, workflow, data]);
+  }, [restored, costShare, theme, role, marketSel, currencySel, workflow, data]);
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "auto") root.removeAttribute("data-theme");
@@ -224,9 +250,32 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
       <header className="top">
         <h1>{t.title}</h1>
         <div className="filters">
+          {markets.length > 1 && (
+            <label>
+              {t.marketLabel}
+              <select
+                value={preset}
+                onChange={(e) => {
+                  const p = PRESETS.find((x) => x.id === e.target.value);
+                  if (!p) return;
+                  const chosen = markets.filter((m) => p.markets.includes(m));
+                  setMarketSel(p.id === "all" ? null : chosen);
+                  setCurrencySel(null);
+                  setStore("");
+                }}
+              >
+                {preset === "custom" && <option value="custom">{t.marketCustom}</option>}
+                {PRESETS.filter((p) => p.id === "all" || p.markets.every((m) => markets.includes(m))).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {{ all: t.presetAll, DE: t.presetDE, AT: t.presetAT, CH: t.presetCH, "DE+AT": t.presetDEAT }[p.id]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             {t.scope}
-            <select value={store} onChange={(e) => setStore(e.target.value)}>
+            <select value={activeStore} onChange={(e) => setStore(e.target.value)}>
               <option value="">{t.allStores}</option>
               {stores.map(([id, city]) => (
                 <option key={id} value={id}>{city === id ? id : `${city} (${id})`}</option>
@@ -248,6 +297,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
       <main id="main" tabIndex={-1}>
         {failed && <p role="alert">{t.error}</p>}
         {!data && !failed && <p role="status">{t.loading}</p>}
+        {nothingSelected && <p role="alert">{t.marketsNone}</p>}
         {data && (
           <Tabs groups={groups} active={tab} onChange={changeTab} label={t.tabsLabel}>
             {tab === "overview" && (
@@ -309,8 +359,12 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
             {tab === "markdown" && <MarkdownTab items={scope} lang={lang} t={t} onOpen={openForecast} />}
             {tab === "settings" && (
               <SettingsTab
+                markets={markets} selectedMarkets={selMarkets}
+                onToggleMarket={(m) => setMarketSel(toggle([...selMarkets], markets, m))}
+                currencies={currencies} selectedCurrencies={selCurrencies}
+                onToggleCurrency={(c) => setCurrencySel(toggle([...selCurrencies], currencies, c))}
                 costShare={costShare} onCost={setCostShare} theme={theme} onTheme={setTheme}
-                onReset={() => { setCostShare(COST_SHARE); setTheme("auto"); }} t={t}
+                onReset={() => { setCostShare(COST_SHARE); setTheme("auto"); setMarketSel(null); setCurrencySel(null); }} t={t}
               />
             )}
             {tab === "help" && <HelpTab t={t} />}
@@ -318,7 +372,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
               <ScenariosTab key={key} item={item} scope={scope} lang={lang} t={t} costShare={costShare} />
             )}
             {tab === "savings" && (
-              <SavingsTab replay={replay} failed={replayFailed} lang={lang} t={t} />
+              <SavingsTab replay={replay} failed={replayFailed} lang={lang} t={t} markets={selMarkets} currencies={selCurrencies} />
             )}
             {tab === "data" && (
               <DataTab

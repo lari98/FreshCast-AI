@@ -1,7 +1,7 @@
 import { formatCurrency, formatDate, formatNumber, formatPercent } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
 import { POLICY_IDS, change } from "@/lib/replay";
-import type { PolicyId, Replay } from "@/lib/replay";
+import type { PolicyId, PolicyStats, Replay } from "@/lib/replay";
 import type { Lang } from "@/lib/types";
 
 interface Props {
@@ -9,29 +9,47 @@ interface Props {
   failed: boolean;
   lang: Lang;
   t: Strings;
+  markets?: ReadonlySet<string>;
+  currencies?: ReadonlySet<string>;
 }
 
 const signed = (v: number | null, lang: Lang) =>
   v === null ? "–" : `${v > 0 ? "+" : ""}${formatPercent(v, lang, 1)}`;
 
-export function SavingsTab({ replay, failed, lang, t }: Props) {
+export function SavingsTab({ replay, failed, lang, t, markets, currencies: selCur }: Props) {
   if (failed) return <p role="alert">{t.replayError}</p>;
   if (!replay) return <p role="status">{t.loading}</p>;
 
   const names: Record<PolicyId, string> = {
     naive: t.polNaive, rule_v1: t.polRule, newsvendor: t.polNewsvendor, planner: t.polPlanner,
   };
-  const currencies = Object.keys(replay.policies.naive);
-  const lead = currencies.includes("EUR") ? "EUR" : (currencies[0] ?? "EUR");
-  const nv = replay.policies.newsvendor[lead];
-  const rule = replay.policies.rule_v1[lead];
+  // One block per selected market (DE, AT, CH); old files without markets fall back to currencies.
+  const blocks: { id: string; title: string; currency: string; stats: Record<PolicyId, PolicyStats | undefined> }[] =
+    replay.markets
+      ? Object.entries(replay.markets)
+          .filter(([m, v]) => (!markets || markets.has(m)) && (!selCur || selCur.has(v.currency)))
+          .sort(([a], [b]) => ["DE", "AT", "CH"].indexOf(a) - ["DE", "AT", "CH"].indexOf(b))
+          .map(([m, v]) => ({
+            id: m, title: t.marketNames[m] ?? m, currency: v.currency,
+            stats: v.policies as unknown as Record<PolicyId, PolicyStats | undefined>,
+          }))
+      : Object.keys(replay.policies.naive)
+          .filter((c) => !selCur || selCur.has(c))
+          .map((c) => ({
+            id: c, title: c, currency: c,
+            stats: Object.fromEntries(POLICY_IDS.map((p) => [p, replay.policies[p][c]])) as Record<PolicyId, PolicyStats | undefined>,
+          }));
+  if (blocks.length === 0) return <p>{t.marketsNone}</p>;
+  const lead = blocks[0]!;
+  const nv = lead.stats.newsvendor;
+  const rule = lead.stats.rule_v1;
   const { wins, weeks } = replay.newsvendor_beats_rule_v1_weeks;
   const weeklyMax = Math.max(1, ...POLICY_IDS.flatMap((p) => replay.weekly[p].waste));
   const nWeeks = replay.weekly.naive.waste.length;
   const cats = Object.keys(replay.categories).sort();
 
   const cards: { label: string; value: string; note: string }[] = nv && rule ? [
-    { label: t.savProfit, value: signed(nv.profit_vs_naive, lang), note: `${names.newsvendor} ${t.savVs} ${names.naive}` },
+    { label: t.savProfit, value: signed(nv.profit_vs_naive, lang), note: `${lead.title}: ${names.newsvendor} ${t.savVs} ${names.naive}` },
     { label: t.savWaste, value: signed(change(nv.waste_cost, rule.waste_cost), lang), note: `${names.newsvendor} ${t.savVs} ${names.rule_v1}` },
     { label: t.savFill, value: formatPercent(nv.fill_rate, lang), note: `${names.rule_v1}: ${formatPercent(rule.fill_rate, lang)}` },
     { label: t.savWeeks, value: `${formatNumber(wins, lang)} ${t.kpiOf} ${formatNumber(weeks, lang)}`, note: `${names.newsvendor} ${t.savVs} ${names.rule_v1}` },
@@ -53,10 +71,10 @@ export function SavingsTab({ replay, failed, lang, t }: Props) {
         ))}
       </ul>
 
-      {currencies.map((cur) => (
-        <section key={cur} aria-labelledby={`pol-${cur}`} className="card">
-          <h2 id={`pol-${cur}`}>{t.savPolicies} ({cur})</h2>
-          <div className="scroll" tabIndex={0} role="region" aria-label={`${t.savPolicies} ${cur} – ${t.tableLabel}`}>
+      {blocks.map((b) => (
+        <section key={b.id} aria-labelledby={`pol-${b.id}`} className="card">
+          <h2 id={`pol-${b.id}`}>{t.savPolicies} ({b.title}, {b.currency})</h2>
+          <div className="scroll" tabIndex={0} role="region" aria-label={`${t.savPolicies} ${b.title} – ${t.tableLabel}`}>
             <table>
               <thead>
                 <tr>
@@ -71,9 +89,9 @@ export function SavingsTab({ replay, failed, lang, t }: Props) {
               </thead>
               <tbody>
                 {POLICY_IDS.map((p) => {
-                  const s = replay.policies[p][cur];
+                  const s = b.stats[p];
                   if (!s) return null;
-                  const money = (v: number) => formatCurrency(v, cur as "EUR" | "CHF", lang);
+                  const money = (v: number) => formatCurrency(v, b.currency as "EUR" | "CHF", lang);
                   return (
                     <tr key={p}>
                       <th scope="row">{names[p]}</th>
@@ -92,6 +110,7 @@ export function SavingsTab({ replay, failed, lang, t }: Props) {
         </section>
       ))}
 
+      <p className="hint">{t.savAllNote}</p>
       <section aria-labelledby="wk-h" className="card">
         <h2 id="wk-h">{t.savWeekly}</h2>
         <p className="hint">{t.savWeeklyHint}</p>

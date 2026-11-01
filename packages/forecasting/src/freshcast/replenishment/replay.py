@@ -413,6 +413,45 @@ def summarise(result: ReplayResult) -> pd.DataFrame:
     ).reset_index(drop=True)
 
 
+def market_summary(result: ReplayResult) -> dict[str, Any]:
+    """Headline numbers per market (country prefix of the store id) and policy."""
+    df = _counted(result)
+    df["market"] = df["store_id"].str.split("-").str[0]
+    g = df.groupby(["market", "currency", "policy"], as_index=False).agg(
+        received=("received", "sum"),
+        demand=("demand", "sum"),
+        sold=("sold", "sum"),
+        waste=("waste", "sum"),
+        waste_cost=("waste_cost", "sum"),
+        lost_margin=("lost_margin", "sum"),
+        profit=("profit", "sum"),
+    )
+    out: dict[str, Any] = {}
+    for market, sub in g.groupby("market"):
+        base = sub[sub["policy"] == "naive"].iloc[0].to_dict()
+        policies: dict[str, Any] = {}
+        for r in sub.to_dict("records"):
+            demand, received = float(r["demand"]), float(r["received"])
+            policies[str(r["policy"])] = {
+                "profit": round(float(r["profit"]), 2),
+                "waste_cost": round(float(r["waste_cost"]), 2),
+                "lost_margin": round(float(r["lost_margin"]), 2),
+                "fill_rate": round(float(r["sold"]) / demand, 4) if demand else 0.0,
+                "waste_rate": round(float(r["waste"]) / received, 4)
+                if received
+                else 0.0,
+                "profit_vs_naive": _pct(float(r["profit"]), float(base["profit"])),
+                "waste_cost_vs_naive": _pct(
+                    float(r["waste_cost"]), float(base["waste_cost"])
+                ),
+            }
+        out[str(market)] = {
+            "currency": str(sub["currency"].iloc[0]),
+            "policies": policies,
+        }
+    return out
+
+
 def weekly_units(result: ReplayResult) -> pd.DataFrame:
     """Waste and lost units per policy and week (units, so currency-free)."""
     df = _counted(result)
@@ -511,6 +550,7 @@ def to_json(result: ReplayResult) -> dict[str, Any]:
         "to": (cfg.start + timedelta(days=cfg.days - 1)).isoformat(),
         "series": int(len(result.meta)),
         "policies": policies,
+        "markets": market_summary(result),
         "weekly": weekly,
         "categories": categories,
     }

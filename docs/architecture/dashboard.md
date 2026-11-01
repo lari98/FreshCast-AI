@@ -36,3 +36,12 @@ reach your local API; run the dashboard locally for this feature.
 
 ## Known gaps
 No auth in the dashboard; approve is local state only; no real API calls yet.
+
+## Markets and currencies
+The header has a **Markt** switch (all DACH, Germany only, Austria only, Switzerland only,
+Germany + Austria). *Settings* has one checkbox per market and per currency for any
+other combination. A market is the country prefix of the store id (`DE-MUC-001` is
+Germany). Deselected markets and currencies are hidden in every tab, including the
+store list, the Approval workflow, alerts and the Savings replay, which is split by
+market in `replay.json`. The choice is kept in the browser (localStorage). Uploaded
+files whose store ids have no country prefix fall into "Other" and show without the switch.

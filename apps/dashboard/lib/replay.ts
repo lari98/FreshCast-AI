@@ -22,6 +22,8 @@ export interface Replay {
   to: string;
   series: number;
   policies: Record<PolicyId, Record<string, PolicyStats>>;
+  /** Per market (country prefix of the store id); optional in older files. */
+  markets?: Record<string, { currency: string; policies: Record<PolicyId, Omit<PolicyStats, "revenue" | "waste_units" | "lost_units">> }>;
   weekly: Record<PolicyId, { waste: number[]; lost: number[] }>;
   categories: Record<string, Partial<Record<PolicyId, { waste_rate: number; fill_rate: number }>>>;
   newsvendor_beats_rule_v1_weeks: { wins: number; weeks: number };

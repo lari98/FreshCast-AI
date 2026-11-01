@@ -193,6 +193,65 @@ describe("approval, settings and new tabs", () => {
   });
 });
 
+describe("market and currency filter", () => {
+  const ordersRows = () => within(screen.getByRole("table")).getAllByRole("row").length - 1;
+
+  it("Germany only: every tab shows only German stores and no CHF", async () => {
+    await setup();
+    await userEvent.selectOptions(screen.getByLabelText("Markt"), "DE");
+    expect(screen.getByLabelText("Bereich")).toHaveTextContent("Munich");
+    expect(screen.getByLabelText("Bereich")).not.toHaveTextContent("Vienna");
+    expect(screen.getByLabelText("Bereich")).not.toHaveTextContent("Zurich");
+    expect(screen.getByText("Bestellwert (Einkauf)").closest("li")!.textContent).not.toMatch(/CHF/);
+    await openTab(/Bestellungen/);
+    expect(ordersRows()).toBe(8);
+  });
+
+  it("Switzerland only: CHF only; Germany + Austria: EUR only", async () => {
+    await setup();
+    await userEvent.selectOptions(screen.getByLabelText("Markt"), "CH");
+    const li = screen.getByText("Bestellwert (Einkauf)").closest("li")!;
+    expect(li.textContent).toMatch(/CHF/);
+    expect(li.textContent).not.toMatch(/€/);
+    await userEvent.selectOptions(screen.getByLabelText("Markt"), "DE+AT");
+    expect(screen.getByText("Bestellwert (Einkauf)").closest("li")!.textContent).not.toMatch(/CHF/);
+  });
+
+  it("settings checkboxes build a custom selection, and an empty one is explained", async () => {
+    await setup();
+    await openTab(/Einstellungen/);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Schweiz" }));
+    expect(screen.getByLabelText("Markt")).toHaveValue("DE+AT");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Österreich" }));
+    expect(screen.getByLabelText("Markt")).toHaveValue("DE");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Deutschland" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Kein Markt");
+    expect(JSON.parse(window.localStorage.getItem("freshcast.settings.v2")!).markets).toEqual([]);
+  });
+
+  it("currency checkbox hides one currency across markets", async () => {
+    await setup();
+    await openTab(/Einstellungen/);
+    await userEvent.click(screen.getByRole("checkbox", { name: "CHF" }));
+    await openTab(/Bestellungen/);
+    expect(ordersRows()).toBe(16);
+  });
+
+  it("savings follow the selected market", async () => {
+    await setup();
+    await userEvent.selectOptions(screen.getByLabelText("Markt"), "AT");
+    await openTab(/Einsparungen/);
+    expect(screen.getByRole("heading", { name: /Bestellregeln im Vergleich \(Österreich, EUR\)/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Schweiz/ })).not.toBeInTheDocument();
+  });
+
+  it("restores the market choice from the browser", async () => {
+    window.localStorage.setItem("freshcast.settings.v2", JSON.stringify({ markets: ["CH"], costShare: 0.6, theme: "auto", role: "planner", workflow: {} }));
+    await setup();
+    await waitFor(() => expect(screen.getByLabelText("Markt")).toHaveValue("CH"));
+  });
+});
+
 describe("csvCell", () => {
   it("neutralises spreadsheet formulas and quotes separators", () => {
     expect(csvCell("=SUM(A1)")).toBe("'=SUM(A1)");

@@ -154,3 +154,5 @@ label.check { flex-direction: row; align-items: center; gap: 8px; min-height: 44
 .btn.small { min-height: 44px; min-width: 44px; padding: 4px 10px; }
 td select { min-height: 44px; max-width: 170px; }
 .nowrap { white-space: nowrap; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 20px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+.checks legend { font-size: 0.85rem; color: var(--muted); padding: 0 6px; }

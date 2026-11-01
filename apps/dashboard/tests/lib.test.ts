@@ -134,3 +134,29 @@ describe("markdown what-if", () => {
     expect(rows.reduce((s, r) => s + r.items, 0)).toBe(metrics.length);
   });
 });
+
+import { availableMarkets, filterMarkets, marketOf, presetFor } from "@/lib/markets";
+
+describe("markets", () => {
+  it("reads the country from the store id", () => {
+    expect(marketOf({ store_id: "DE-MUC-001" })).toBe("DE");
+    expect(marketOf({ store_id: "ch-zrh-001" })).toBe("CH");
+    expect(marketOf({ store_id: "S1" })).toBe("OTHER");
+  });
+  it("filters by market and currency together", () => {
+    expect(availableMarkets(data.items)).toEqual(["DE", "AT", "CH"]);
+    const de = filterMarkets(data.items, new Set(["DE"]), null);
+    expect(de.length).toBe(8);
+    expect(de.every((i) => i.store_id.startsWith("DE-"))).toBe(true);
+    expect(filterMarkets(data.items, null, new Set(["CHF"])).every((i) => i.currency === "CHF")).toBe(true);
+    expect(filterMarkets(data.items, new Set(["DE"]), new Set(["CHF"]))).toEqual([]);
+    expect(filterMarkets(data.items, new Set(), null)).toEqual([]);
+  });
+  it("recognises presets and custom selections", () => {
+    const avail = ["DE", "AT", "CH"];
+    expect(presetFor(new Set(avail), avail)).toBe("all");
+    expect(presetFor(new Set(["AT"]), avail)).toBe("AT");
+    expect(presetFor(new Set(["DE", "AT"]), avail)).toBe("DE+AT");
+    expect(presetFor(new Set(["AT", "CH"]), avail)).toBe("custom");
+  });
+});

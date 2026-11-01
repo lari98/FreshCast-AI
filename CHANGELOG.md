@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased (phase 13)
+- Market and currency filter: show Germany, Austria and Switzerland (or any combination, EUR and/or CHF) across all tabs; header presets, Settings checkboxes, saved in the browser. The Savings replay is now split by market.
 - Dashboard redesign: new light/dark palette with a theme switch, grouped sidebar navigation (17 sections), settings for the cost share.
 - Approval tab with the four-eyes principle: planner edits a quantity (whole packs, reason required) and submits, reviewer approves or rejects; state kept in the browser (demo, not authentication).
 - Store comparison, markdown (price cut) what-if for expiring stock with stated assumptions, help and glossary.

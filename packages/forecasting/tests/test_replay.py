@@ -87,6 +87,9 @@ def test_json_and_markdown_outputs(result) -> None:  # type: ignore[no-untyped-d
     assert set(payload["policies"]) == set(POLICIES)
     assert payload["newsvendor_beats_rule_v1_weeks"]["weeks"] >= 4
     assert "profit_vs_naive" in payload["policies"]["rule_v1"]["EUR"]
+    de = payload["markets"]["DE"]
+    assert de["currency"] == "EUR"
+    assert set(de["policies"]) == set(POLICIES)
     assert len(weekly_units(result)) > 0
     assert "# Policy replay" in render_markdown(result)
 
