@@ -30,6 +30,9 @@ class StockLot:
     lot_id: str
     quantity: int
     use_by_date: date
+    # Food-safety hold or recall: blocked stock is never sellable, whatever
+    # the forecast says (safety always overrides commercial logic).
+    blocked: bool = False
 
     def __post_init__(self) -> None:
         """Reject malformed lots at the boundary."""
@@ -88,12 +91,9 @@ def calculate_replenishment(request: ReplenishmentRequest) -> ReplenishmentDecis
 
     # Lots whose use-by date falls before arrival cannot be sold from the
     # replenished shelf, so they must not reduce the order quantity.
-    usable = sum(
-        lot.quantity for lot in request.stock_lots if lot.use_by_date >= arrival_date
-    )
-    expiring = sum(
-        lot.quantity for lot in request.stock_lots if lot.use_by_date < arrival_date
-    )
+    sellable = [lot for lot in request.stock_lots if not lot.blocked]
+    usable = sum(lot.quantity for lot in sellable if lot.use_by_date >= arrival_date)
+    expiring = sum(lot.quantity for lot in sellable if lot.use_by_date < arrival_date)
 
     target = request.forecast_units + request.safety_stock_units
     shortage = max(0, target - usable - request.incoming_units)

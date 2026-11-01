@@ -87,3 +87,15 @@ def test_negative_stock_is_rejected() -> None:
 def test_blank_lot_id_rejected() -> None:
     with pytest.raises(ValueError, match="lot_id"):
         StockLot(" ", 1, TODAY)
+
+
+def test_blocked_lots_are_never_counted_as_usable() -> None:
+    req = _request(
+        stock_lots=(
+            StockLot("LOT-OK", 40, TODAY + timedelta(days=4)),
+            StockLot("LOT-RECALL", 500, TODAY + timedelta(days=4), blocked=True),
+        )
+    )
+    result = calculate_replenishment(req)
+    assert result.usable_stock_units == 40
+    assert result.recommended_order_units == 96
