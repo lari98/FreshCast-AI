@@ -28,7 +28,7 @@ label { display: inline-flex; flex-direction: column; gap: 4px; font-size: 0.9re
 select { min-height: 44px; padding: 6px 8px; font: inherit; color: var(--text);
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
 .filters { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
-.grid-2 { display: grid; gap: 16px; grid-template-columns: 1fr; margin-bottom: 16px; }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: 1fr; margin-bottom: 16px; align-items: start; }
 @media (min-width: 900px) { .grid-2 { grid-template-columns: 3fr 2fr; } }
 .card { background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 16px; }
@@ -53,8 +53,8 @@ select { min-height: 44px; padding: 6px 8px; font: inherit; color: var(--text);
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 thead th { font-size: 0.85rem; color: var(--muted); }
-.risk-watch { color: var(--warn); font-weight: 600; }
-.risk-critical { color: var(--crit); font-weight: 700; }
+.risk-medium { color: var(--warn); font-weight: 600; }
+.risk-high { color: var(--crit); font-weight: 700; }
 .notice, .hint { color: var(--muted); font-size: 0.9rem; }
 .big { display: flex; flex-direction: column; margin: 8px 0 12px; }
 .big-label { font-size: 0.85rem; color: var(--muted); }

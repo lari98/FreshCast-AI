@@ -44,7 +44,7 @@ export const STRINGS = {
     approveHint:
       "Vier-Augen-Prinzip: Im Echtbetrieb gibt eine zweite berechtigte Person frei.",
     explanationTitle: "Erklärung",
-    risks: { ok: "ok", watch: "beobachten", critical: "kritisch" } as Record<
+    risks: { low: "niedrig", medium: "mittel", high: "hoch" } as Record<
       Risk,
       string
     >,
@@ -93,7 +93,7 @@ export const STRINGS = {
     approveHint:
       "Four-eyes principle: in production a second authorised person approves.",
     explanationTitle: "Explanation",
-    risks: { ok: "ok", watch: "watch", critical: "critical" } as Record<
+    risks: { low: "low", medium: "medium", high: "high" } as Record<
       Risk,
       string
     >,

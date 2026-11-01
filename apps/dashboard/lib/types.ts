@@ -1,7 +1,7 @@
 /** Shapes of the demo/API payload. Mirrors scripts/export_demo_data.py. */
 
 export type Lang = "de" | "en";
-export type Risk = "ok" | "watch" | "critical";
+export type Risk = "low" | "medium" | "high";
 
 export interface Localised {
   de: string;

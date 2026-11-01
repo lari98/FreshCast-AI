@@ -116,7 +116,7 @@ export function ForecastChart({ series, lang, t, asOf }: Props) {
           <path d={line((p) => p.point)} className="forecast" fill="none" />
           <path d={line((p) => p.actual)} className="actual" fill="none" />
           {[0, Math.floor((series.length - 1) / 2), series.length - 1].map((i) => (
-            <text key={i} x={x(i)} y={H - 10} textAnchor="middle" className="axis">
+            <text key={i} x={x(i)} y={H - 10} textAnchor={i === 0 ? "start" : i === series.length - 1 ? "end" : "middle"} className="axis">
               {series[i] ? formatDate(series[i].date, lang) : ""}
             </text>
           ))}

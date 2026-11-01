@@ -10,7 +10,7 @@ interface Props {
 
 /** Stock lots sorted by use-by date. Risk is shown as text + symbol, not colour alone. */
 export function ExpiryTable({ lots, lang, t }: Props) {
-  const symbol = { ok: "●", watch: "▲", critical: "■" } as const;
+  const symbol = { low: "●", medium: "▲", high: "■" } as const;
   const sorted = [...lots].sort((a, b) => a.use_by.localeCompare(b.use_by));
   return (
     <section aria-labelledby="lots-h" className="card">

@@ -51,6 +51,11 @@ describe("Dashboard", () => {
     );
   });
 
+  it("shows a risk label for every stock lot", async () => {
+    await setup();
+    expect(screen.getAllByText(/niedrig|mittel|hoch/).length).toBeGreaterThan(0);
+  });
+
   it("shows an alert when loading fails", async () => {
     render(<Dashboard load={async () => Promise.reject(new Error("x"))} />);
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
