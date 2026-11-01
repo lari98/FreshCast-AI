@@ -103,9 +103,15 @@ def analyze(
             "too high for stores that hold stock"
         )
 
-    for col in ("unit_price", "product_name", "shelf_life_days", "pack_size"):
+    for col in (
+        "unit_price",
+        "product_name",
+        "category",
+        "shelf_life_days",
+        "pack_size",
+    ):
         if col not in panel:
-            panel[col] = np.nan if col != "product_name" else None
+            panel[col] = np.nan if col not in ("product_name", "category") else None
     price = panel["unit_price"].fillna(1.0)
     panel["unit_price"] = price
     future = _future_rows(panel, as_of_date)
@@ -257,6 +263,8 @@ def _item(
         "sku": sku,
         "name": {"de": name, "en": name},
         "shelf_life_days": shelf,
+        "unit_price": round(unit_price, 2),
+        "category": str(meta["category"]) if pd.notna(meta["category"]) else "",
         "series": series,
         "lots": [
             {

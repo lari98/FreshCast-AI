@@ -146,6 +146,8 @@ def main() -> None:
                     "sku": product.sku,
                     "name": {"de": product.name_de, "en": product.name_en},
                     "shelf_life_days": product.shelf_life_days,
+                    "unit_price": product.base_price_eur,
+                    "category": product.category,
                     "series": series,
                     "lots": [
                         {

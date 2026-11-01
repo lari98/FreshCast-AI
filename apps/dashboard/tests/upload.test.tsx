@@ -97,6 +97,7 @@ describe("analyzeUpload", () => {
 
 describe("Dashboard with an upload result", () => {
   it("shows the data-quality panel and the upload banner, and stays accessible", async () => {
+    window.history.replaceState(null, "", "#data");
     const { container } = render(<Dashboard load={async () => uploaded} />);
     expect(await screen.findByRole("heading", { name: "Datenqualität" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("hochgeladenen");

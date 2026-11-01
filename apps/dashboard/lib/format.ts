@@ -25,9 +25,29 @@ export function formatCurrency(
   value: number,
   currency: "EUR" | "CHF",
   lang: Lang,
+  digits = 0,
 ): string {
   return new Intl.NumberFormat(LOCALE[lang], {
     style: "currency",
     currency,
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(value);
+}
+
+/** "1.234 € · 567 CHF": only currencies that have a non-zero amount. */
+export function formatMoney(m: { EUR: number; CHF: number }, lang: Lang): string {
+  const parts = (["EUR", "CHF"] as const)
+    .filter((c) => m[c] > 0)
+    .map((c) => formatCurrency(m[c], c, lang));
+  return parts.length ? parts.join(" · ") : formatCurrency(0, "EUR", lang);
+}
+
+export function formatPercent(value: number | null, lang: Lang, digits = 1): string {
+  if (value === null) return "–";
+  return new Intl.NumberFormat(LOCALE[lang], {
+    style: "percent",
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
   }).format(value);
 }

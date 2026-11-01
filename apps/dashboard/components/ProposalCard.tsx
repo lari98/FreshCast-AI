@@ -10,11 +10,15 @@ interface Props {
   explanation: string;
   lang: Lang;
   t: Strings;
+  /** Lifted approval state (shared with the Orders tab). Falls back to local state. */
+  approved?: boolean;
+  onApprove?: () => void;
 }
 
 /** Order proposal with a human approval step. Nothing is ordered in demo mode. */
-export function ProposalCard({ proposal: p, explanation, lang, t }: Props) {
-  const [approved, setApproved] = useState(false);
+export function ProposalCard({ proposal: p, explanation, lang, t, approved: approvedProp, onApprove }: Props) {
+  const [local, setLocal] = useState(false);
+  const approved = approvedProp ?? local;
   const n = (v: number) => `${formatNumber(v, lang)} ${t.units}`;
   const rows: [string, string][] = [
     [t.usable, n(p.usable_stock_units)],
@@ -47,7 +51,7 @@ export function ProposalCard({ proposal: p, explanation, lang, t }: Props) {
       <button
         type="button"
         className="btn primary"
-        onClick={() => setApproved(true)}
+        onClick={() => (onApprove ? onApprove() : setLocal(true))}
         disabled={approved}
       >
         {t.approve}

@@ -50,6 +50,8 @@ ALIASES: dict[str, str] = {
     "bestand": "quantity",
     "mhd": "use_by_date",
     "charge": "lot_id",
+    "warengruppe": "category",
+    "kategorie": "category",
 }
 REQUIRED_SALES = ("store_id", "sku", "business_date", "units_sold")
 REQUIRED_STOCK = ("store_id", "sku", "quantity", "use_by_date")
@@ -154,7 +156,7 @@ def clean_sales(
             "units_sold": _numeric(raw["units_sold"], comma),
         }
     )
-    for col, default in (("product_name", None), ("is_open", None)):
+    for col, default in (("product_name", None), ("category", None), ("is_open", None)):
         if col in raw.columns:
             df[col] = raw[col].str.strip()
         elif default is not None:
@@ -191,7 +193,13 @@ def clean_sales(
 
     meta_cols = [
         c
-        for c in ("product_name", "unit_price", "shelf_life_days", "pack_size")
+        for c in (
+            "product_name",
+            "category",
+            "unit_price",
+            "shelf_life_days",
+            "pack_size",
+        )
         if c in df
     ]
     meta = df.groupby(["store_id", "sku"])[meta_cols].last() if meta_cols else None

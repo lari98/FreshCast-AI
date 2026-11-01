@@ -45,6 +45,8 @@ export interface Item {
   sku: string;
   name: Localised;
   shelf_life_days: number;
+  unit_price: number;
+  category?: string;
   series: SeriesPoint[];
   lots: Lot[];
   proposal: Proposal;

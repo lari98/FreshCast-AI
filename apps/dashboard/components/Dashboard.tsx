@@ -1,18 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadData } from "@/lib/source";
 import { STRINGS } from "@/lib/i18n";
+import { itemKey, itemMetrics } from "@/lib/kpi";
 import type { DashboardData, Lang } from "@/lib/types";
-import { ExpiryTable } from "./ExpiryTable";
-import { ForecastChart } from "./ForecastChart";
-import { ProposalCard } from "./ProposalCard";
-import { QualityPanel } from "./QualityPanel";
-import { UploadPanel } from "./UploadPanel";
+import { DataTab } from "./DataTab";
+import { ExpiryTab } from "./ExpiryTab";
+import { ForecastTab } from "./ForecastTab";
+import { ModelTab } from "./ModelTab";
+import { OrdersTab } from "./OrdersTab";
+import { OverviewTab } from "./OverviewTab";
+import { ScenariosTab } from "./ScenariosTab";
+import { Tabs } from "./Tabs";
 
 interface Props {
   /** Injected in tests; defaults to the demo/API loader. */
   load?: () => Promise<DashboardData>;
+}
+
+const TAB_IDS = ["overview", "orders", "forecast", "expiry", "whatif", "data", "model"] as const;
+type TabId = (typeof TAB_IDS)[number];
+
+function tabFromHash(): TabId {
+  try {
+    const h = window.location.hash.replace("#", "");
+    return (TAB_IDS as readonly string[]).includes(h) ? (h as TabId) : "overview";
+  } catch {
+    return "overview";
+  }
 }
 
 export function Dashboard({ load = () => loadData() }: Props) {
@@ -20,15 +36,18 @@ export function Dashboard({ load = () => loadData() }: Props) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [demo, setDemo] = useState<DashboardData | null>(null);
   const [failed, setFailed] = useState(false);
-  const [store, setStore] = useState<string>("");
-  const [sku, setSku] = useState<string>("");
+  const [store, setStore] = useState<string>(""); // "" = all stores
+  const [selected, setSelected] = useState<string>("");
+  const [approved, setApproved] = useState<ReadonlySet<string>>(new Set());
+  const [tab, setTab] = useState<TabId>("overview");
   const t = STRINGS[lang];
 
-  function show(d: DashboardData) {
+  const show = useCallback((d: DashboardData) => {
     setData(d);
-    setStore(d.items[0]?.store_id ?? "");
-    setSku(d.items[0]?.sku ?? "");
-  }
+    setStore("");
+    setSelected(d.items[0] ? itemKey(d.items[0]) : "");
+    setApproved(new Set());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,28 +64,75 @@ export function Dashboard({ load = () => loadData() }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tab <-> URL hash, so a tab can be bookmarked or shared.
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash());
+    queueMicrotask(onHash); // read the initial hash after hydration
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  function changeTab(id: string) {
+    setTab(id as TabId);
+    try {
+      window.history.replaceState(null, "", `#${id}`);
+    } catch {
+      /* Some embedded viewers forbid history changes; the tab still switches. */
+    }
+  }
+
   const stores = useMemo(
     () => [...new Map((data?.items ?? []).map((i) => [i.store_id, i.city])).entries()],
     [data],
   );
-  const products = useMemo(
-    () => (data?.items ?? []).filter((i) => i.store_id === store),
+  const scope = useMemo(
+    () => (data?.items ?? []).filter((i) => !store || i.store_id === store),
     [data, store],
   );
-  const item = products.find((i) => i.sku === sku) ?? products[0];
+  const metrics = useMemo(() => scope.map(itemMetrics), [scope]);
+  const item = scope.find((i) => itemKey(i) === selected) ?? scope[0];
+  const key = item ? itemKey(item) : "";
+
+  function openForecast(k: string) {
+    setSelected(k);
+    changeTab("forecast");
+  }
+  const approve = (keys: string[]) =>
+    setApproved((prev) => new Set([...prev, ...keys]));
+
+  const tabs = [
+    { id: "overview", label: t.tabOverview },
+    { id: "orders", label: t.tabOrders },
+    { id: "forecast", label: t.tabForecast },
+    { id: "expiry", label: t.tabExpiry },
+    { id: "whatif", label: t.tabScenarios },
+    { id: "data", label: t.tabData },
+    { id: "model", label: t.tabModel },
+  ];
 
   return (
     <>
       <a className="skip" href="#main">{t.skip}</a>
       <header className="top">
         <h1>{t.title}</h1>
-        <label>
-          {t.language}
-          <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-            <option value="de">Deutsch</option>
-            <option value="en">English</option>
-          </select>
-        </label>
+        <div className="filters">
+          <label>
+            {t.scope}
+            <select value={store} onChange={(e) => setStore(e.target.value)}>
+              <option value="">{t.allStores}</option>
+              {stores.map(([id, city]) => (
+                <option key={id} value={id}>{city === id ? id : `${city} (${id})`}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t.language}
+            <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </div>
       </header>
       <p className="banner" role="note">
         {data?.source === "upload" ? t.uploadBanner : t.demoBanner}
@@ -74,50 +140,64 @@ export function Dashboard({ load = () => loadData() }: Props) {
       <main id="main" tabIndex={-1}>
         {failed && <p role="alert">{t.error}</p>}
         {!data && !failed && <p role="status">{t.loading}</p>}
-        <UploadPanel
-          t={t}
-          onData={show}
-          onReset={() => demo && show(demo)}
-          showReset={data?.source === "upload"}
-        />
-        {data?.quality && <QualityPanel quality={data.quality} lang={lang} t={t} />}
-        {data && item && (
-          <>
-            <div className="filters">
-              <label>
-                {t.store}
-                <select
-                  value={store}
-                  onChange={(e) => {
-                    setStore(e.target.value);
-                    setSku(data.items.find((i) => i.store_id === e.target.value)?.sku ?? "");
-                  }}
-                >
-                  {stores.map(([id, city]) => (
-                    <option key={id} value={id}>{city === id ? id : `${city} (${id})`}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.product}
-                <select value={item.sku} onChange={(e) => setSku(e.target.value)}>
-                  {products.map((i) => (
-                    <option key={i.sku} value={i.sku}>{i.name[lang]}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="grid-2">
-              <ForecastChart series={item.series} lang={lang} t={t} asOf={data.as_of} />
-              <ProposalCard
-                proposal={item.proposal}
-                explanation={item.explanation[lang]}
+        {data && (
+          <Tabs tabs={tabs} active={tab} onChange={changeTab} label={t.tabsLabel}>
+            {tab === "overview" && (
+              <OverviewTab metrics={metrics} lang={lang} t={t} onOpen={openForecast} />
+            )}
+            {tab === "orders" && (
+              <OrdersTab
+                metrics={metrics}
+                approved={approved}
+                onApprove={approve}
+                onOpen={openForecast}
                 lang={lang}
                 t={t}
               />
-            </div>
-            <ExpiryTable lots={item.lots} lang={lang} t={t} />
-          </>
+            )}
+            {(tab === "forecast" || tab === "whatif") && scope.length > 0 && item && (
+              <div className="filters">
+                <label>
+                  {t.pickItem}
+                  <select value={key} onChange={(e) => setSelected(e.target.value)}>
+                    {scope.map((i) => (
+                      <option key={itemKey(i)} value={itemKey(i)}>
+                        {i.name[lang]} · {i.store_id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+            {tab === "forecast" && item && (
+              <ForecastTab
+                item={item}
+                scope={scope}
+                asOf={data.as_of}
+                approved={approved.has(key)}
+                onApprove={() => approve([key])}
+                lang={lang}
+                t={t}
+              />
+            )}
+            {tab === "expiry" && (
+              <ExpiryTab items={scope} lang={lang} t={t} onOpen={openForecast} />
+            )}
+            {tab === "whatif" && item && (
+              <ScenariosTab key={key} item={item} scope={scope} lang={lang} t={t} />
+            )}
+            {tab === "data" && (
+              <DataTab
+                data={data}
+                onData={show}
+                onReset={() => demo && show(demo)}
+                lang={lang}
+                t={t}
+              />
+            )}
+            {tab === "model" && <ModelTab lang={lang} t={t} />}
+            {(tab === "forecast" || tab === "whatif") && scope.length === 0 && <p>{t.noItems}</p>}
+          </Tabs>
         )}
       </main>
     </>
