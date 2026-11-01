@@ -1,0 +1,36 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+# Secrets & environment - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Cloud / IaC artefacts
+cdk.out/
+.aws-sam/
+# Node
+node_modules/
+.next/
+# Data & model artefacts (use S3 / DVC, keep repo small)
+data/raw/
+data/processed/
+*.parquet
+*.pkl
+*.joblib
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "freshcast"
+version = "0.1.0"
+description = "Domain core for FreshCast AI: perishable demand forecasting and waste-aware replenishment."
+readme = "../../README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = ["pydantic>=2.7,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.11", "bandit>=1.7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+freshcast = ["py.typed"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# E/F: pycodestyle+pyflakes, I: imports, B: bugbear, UP: pyupgrade,
+# S: bandit-style security, D: docstrings (PEP 257), SIM: simplifications.
+select = ["E", "F", "I", "B", "UP", "S", "D", "SIM"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "D103"]  # asserts and undocumented test functions are fine
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --cov=freshcast --cov-report=term-missing --cov-fail-under=85"
