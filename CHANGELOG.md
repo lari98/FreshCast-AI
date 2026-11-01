@@ -3,6 +3,7 @@
 ## Unreleased (advanced dashboard)
 - Seven-tab dashboard: Overview (KPIs per currency, attention list, waste ranking), Orders (search, sort, multi-select approval, CSV export of approved lines with a formula-injection guard), Forecast (chart, proposal, out-of-sample accuracy), Expiry radar (rule-based hints, labelled as not an AI decision), What-if (demand and safety-stock sliders), Data (upload and quality), Model (backtest and scale facts, labelled synthetic).
 - Store scope for all tabs, tab in the URL hash, ARIA tabs with keyboard support, axe test per tab.
+- Four more tabs: Weekly plan (7-day forecast heatmap), Alerts (rule-based stock-out, expiry, demand-spike and accuracy warnings), Assistant (fixed questions answered from the loaded data; not a language model, so numbers cannot be invented), Categories (forecast, revenue and waste rate per product group).
 - Demo and upload payloads carry unit price and category.
 
 ## Unreleased (phase 12)

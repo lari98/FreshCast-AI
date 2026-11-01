@@ -127,7 +127,7 @@ describe("csvCell", () => {
 });
 
 describe("accessibility", () => {
-  it.each([/Übersicht/, /Bestellungen/, /Prognose/, /Verfall/, /Was-wäre-wenn|What-if/, /Daten/, /Modell/])(
+  it.each([/Übersicht/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Daten/, /Modell/])(
     "has no detectable violations on tab %s",
     async (name) => {
       const { container } = await setup();

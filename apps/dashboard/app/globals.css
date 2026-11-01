@@ -110,3 +110,10 @@ label.check { flex-direction: row; align-items: center; gap: 8px; min-height: 44
 .sort { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; font-weight: 600; }
 .sliders { display: grid; gap: 12px; max-width: 480px; margin: 12px 0; }
 .sliders input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--accent); }
+.heat td.cell { text-align: right; min-width: 56px; }
+.heat tfoot th, .heat tfoot td { border-top: 2px solid var(--border); }
+.bar-track.inline { display: inline-block; width: 80px; vertical-align: middle; }
+.answer { margin-top: 12px; }
+.row { margin: 8px 0; }
+.toolbar input[type="text"] { min-height: 44px; padding: 6px 8px; font: inherit; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-width: 260px; }

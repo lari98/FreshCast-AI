@@ -5,6 +5,10 @@ import { loadData } from "@/lib/source";
 import { STRINGS } from "@/lib/i18n";
 import { itemKey, itemMetrics } from "@/lib/kpi";
 import type { DashboardData, Lang } from "@/lib/types";
+import { AlertsTab } from "./AlertsTab";
+import { AssistantTab } from "./AssistantTab";
+import { CategoriesTab } from "./CategoriesTab";
+import { PlanTab } from "./PlanTab";
 import { DataTab } from "./DataTab";
 import { ExpiryTab } from "./ExpiryTab";
 import { ForecastTab } from "./ForecastTab";
@@ -19,7 +23,7 @@ interface Props {
   load?: () => Promise<DashboardData>;
 }
 
-const TAB_IDS = ["overview", "orders", "forecast", "expiry", "whatif", "data", "model"] as const;
+const TAB_IDS = ["overview", "orders", "forecast", "plan", "alerts", "assistant", "expiry", "categories", "whatif", "data", "model"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 function tabFromHash(): TabId {
@@ -104,7 +108,11 @@ export function Dashboard({ load = () => loadData() }: Props) {
     { id: "overview", label: t.tabOverview },
     { id: "orders", label: t.tabOrders },
     { id: "forecast", label: t.tabForecast },
+    { id: "plan", label: t.tabPlan },
+    { id: "alerts", label: t.tabAlerts },
+    { id: "assistant", label: t.tabAssistant },
     { id: "expiry", label: t.tabExpiry },
+    { id: "categories", label: t.tabCategories },
     { id: "whatif", label: t.tabScenarios },
     { id: "data", label: t.tabData },
     { id: "model", label: t.tabModel },
@@ -180,6 +188,12 @@ export function Dashboard({ load = () => loadData() }: Props) {
                 t={t}
               />
             )}
+            {tab === "plan" && <PlanTab items={scope} lang={lang} t={t} onOpen={openForecast} />}
+            {tab === "alerts" && <AlertsTab items={scope} lang={lang} t={t} onOpen={openForecast} />}
+            {tab === "assistant" && (
+              <AssistantTab metrics={metrics} lang={lang} t={t} onOpen={openForecast} />
+            )}
+            {tab === "categories" && <CategoriesTab metrics={metrics} lang={lang} t={t} />}
             {tab === "expiry" && (
               <ExpiryTab items={scope} lang={lang} t={t} onOpen={openForecast} />
             )}
