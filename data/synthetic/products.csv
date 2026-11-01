@@ -1,0 +1,9 @@
+sku,name_de,name_en,category,base_price_eur,shelf_life_days,pack_size,base_daily_demand
+STRAWBERRY-500G,Erdbeeren 500 g,Strawberries 500 g,fruit,3.49,4,12,40
+MILK-1L,Frischmilch 1 l,Fresh milk 1 l,dairy,1.29,7,6,90
+BREAD-WHEAT-750G,Weizenbrot 750 g,Wheat bread 750 g,bakery,2.79,2,10,60
+YOGURT-500G,Joghurt 500 g,Yoghurt 500 g,dairy,1.49,14,8,55
+SALAD-MIXED-200G,Blattsalat 200 g,Mixed salad 200 g,vegetable,1.99,3,10,35
+CHICKEN-BREAST-500G,Haehnchenbrust 500 g,Chicken breast 500 g,meat,6.99,4,6,25
+TOMATO-500G,Tomaten 500 g,Tomatoes 500 g,vegetable,2.29,6,10,45
+SALMON-FILLET-250G,Lachsfilet 250 g,Salmon fillet 250 g,fish,5.99,3,6,18

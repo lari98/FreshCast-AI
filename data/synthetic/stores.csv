@@ -1,0 +1,8 @@
+store_id,country,city,currency,size_factor
+DE-MUC-001,DE,Munich,EUR,1.3
+DE-BER-001,DE,Berlin,EUR,1.1
+DE-ING-001,DE,Ingolstadt,EUR,0.8
+AT-VIE-001,AT,Vienna,EUR,1.2
+AT-GRZ-001,AT,Graz,EUR,0.9
+CH-ZRH-001,CH,Zurich,CHF,1.2
+CH-PFA-001,CH,Pfaeffikon SZ,CHF,0.7
