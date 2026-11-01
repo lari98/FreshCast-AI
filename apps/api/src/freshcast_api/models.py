@@ -88,3 +88,23 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(64))
     entity: Mapped[str] = mapped_column(String(64))
     entity_id: Mapped[str] = mapped_column(String(64))
+
+
+class ProcessedEvent(Base):
+    """Consumer-side idempotency ledger: ids of events already applied."""
+
+    __tablename__ = "processed_events"
+
+    event_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now
+    )
+
+
+class PartitionState(Base):
+    """Highest event version fully applied per store:sku partition."""
+
+    __tablename__ = "partition_state"
+
+    partition_key: Mapped[str] = mapped_column(String(130), primary_key=True)
+    committed_version: Mapped[int] = mapped_column(Integer, default=0)

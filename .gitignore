@@ -34,3 +34,5 @@ data/processed/
 Thumbs.db
 .idea/
 .vscode/
+dist/
+cdk.out/

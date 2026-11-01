@@ -28,5 +28,5 @@ See `docs/architecture/api.md`.
 
 ## Roadmap
 1 Foundation (done) - 2 DACH demo data (done) - 3 API & DB (done) - 4 Forecast engine (done) -
-5 Replenishment v2 (done) - 6 Incremental events (done) - 7 AWS & MLOps -
+5 Replenishment v2 (done) - 6 Incremental events (done) - 7 AWS & MLOps (code done, not deployed) -
 8 Bedrock assistant - 9 Dashboard - 10 Security & release.

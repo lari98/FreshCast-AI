@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [packages/forecasting, apps/api]
+        project: [packages/forecasting, apps/api, infrastructure/cdk]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
