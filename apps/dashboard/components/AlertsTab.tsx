@@ -51,7 +51,7 @@ export function AlertsTab({ items, lang, t, onOpen }: Props) {
                   <th scope="row">
                     <button type="button" className="link" onClick={() => onOpen(a.key)}>{a.item.name[lang]}</button>
                   </th>
-                  <td>{a.item.store_id}</td>
+                  <td className="nowrap">{a.item.store_id}</td>
                   <td>{text[a.kind]}</td>
                   <td>{value(a)}</td>
                 </tr>

@@ -18,22 +18,23 @@ export function OverviewTab({ metrics, lang, t, onOpen }: Props) {
   const top = [...metrics].sort((a, b) => b.wasteCost - a.wasteCost).slice(0, 8);
   const maxWaste = Math.max(1, ...top.map((m) => m.wasteCost));
 
-  const kpis: { label: string; value: string; note?: string }[] = [
-    { label: t.kpiOrderCost, value: formatMoney(sum.orderCost, lang) },
+  const kpis: { label: string; value: string; note?: string; tone: string }[] = [
+    { label: t.kpiOrderCost, value: formatMoney(sum.orderCost, lang), tone: "accent" },
     {
       label: t.kpiToOrder,
       value: `${formatNumber(sum.itemsToOrder, lang)} ${t.kpiOf} ${formatNumber(sum.items, lang)}`,
+      tone: "ok",
     },
-    { label: t.kpiAtRisk, value: formatMoney(sum.atRiskCost, lang) },
-    { label: t.kpiWaste, value: formatMoney(sum.wasteCost, lang), note: t.kpiOutlook },
-    { label: t.kpiLost, value: formatMoney(sum.lostMargin, lang), note: t.kpiOutlook },
+    { label: t.kpiAtRisk, value: formatMoney(sum.atRiskCost, lang), tone: "crit" },
+    { label: t.kpiWaste, value: formatMoney(sum.wasteCost, lang), note: t.kpiOutlook, tone: "warn" },
+    { label: t.kpiLost, value: formatMoney(sum.lostMargin, lang), note: t.kpiOutlook, tone: "warn" },
   ];
 
   return (
     <>
       <ul className="kpis">
         {kpis.map((k) => (
-          <li key={k.label} className="kpi">
+          <li key={k.label} className={`kpi tone-${k.tone}`}>
             <span className="kpi-label">{k.label}</span>
             <span className="kpi-value">{k.value}</span>
             {k.note && <span className="kpi-note">{k.note}</span>}

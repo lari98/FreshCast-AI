@@ -79,3 +79,58 @@ describe("replay helpers", () => {
     expect(() => validateReplay({})).toThrow();
   });
 });
+
+import { byStore } from "@/lib/stores";
+import { bestMarkdown, lotExcess, markdownOutcome } from "@/lib/markdown";
+import { canSubmit, decide, parseWorkflow, setQuantity, setReason, submit } from "@/lib/workflow";
+
+describe("workflow (four eyes)", () => {
+  const lookup = () => ({ proposed: 12, packSize: 6 });
+  it("rounds a changed quantity to whole packs and needs a reason to submit", () => {
+    let wf = setQuantity({}, "a", 12, 6, 17);
+    expect(wf.a!.qty).toBe(18);
+    expect(canSubmit(wf.a!)).toBe(false);
+    wf = setReason(wf, "a", "promo");
+    expect(canSubmit(wf.a!)).toBe(true);
+    wf = submit(wf, ["a"], lookup);
+    expect(wf.a!.status).toBe("submitted");
+  });
+  it("only a reviewer can approve, and only submitted orders", () => {
+    let wf = submit({}, ["a"], lookup);
+    expect(decide(wf, ["a"], "planner", true).a!.status).toBe("submitted");
+    wf = decide(wf, ["a"], "reviewer", true);
+    expect(wf.a!.status).toBe("approved");
+    expect(decide({}, ["b"], "reviewer", true)).toEqual({});
+  });
+  it("changing an approved quantity sends it back to draft", () => {
+    let wf = decide(submit({}, ["a"], lookup), ["a"], "reviewer", true);
+    wf = setQuantity(wf, "a", 12, 6, 6);
+    expect(wf.a!.status).toBe("draft");
+  });
+  it("parses stored data defensively", () => {
+    expect(parseWorkflow("junk")).toEqual({});
+    expect(parseWorkflow({ a: { proposed: 1, qty: 1, packSize: 0, status: "draft" } })).toEqual({});
+    expect(Object.keys(parseWorkflow({ a: { proposed: 6, qty: 6, packSize: 6, status: "approved" } }))).toEqual(["a"]);
+  });
+});
+
+describe("markdown what-if", () => {
+  const metrics = data.items.map(itemMetrics);
+  it("never reports excess above the lot quantity", () => {
+    for (const item of data.items) {
+      for (const row of lotExcess(item)) {
+        expect(row.excess).toBeGreaterThanOrEqual(0);
+        expect(row.excess).toBeLessThanOrEqual(row.quantity);
+      }
+    }
+  });
+  it("a deeper cut at zero elasticity never helps", () => {
+    const item = data.items[0]!;
+    expect(markdownOutcome(item.unit_price, lotExcess(item), 0.3, 0).net).toBeLessThanOrEqual(0);
+    expect(bestMarkdown(item.unit_price, lotExcess(item), 0)).toBeNull();
+  });
+  it("store rows sum back to the totals", () => {
+    const rows = byStore(metrics);
+    expect(rows.reduce((s, r) => s + r.items, 0)).toBe(metrics.length);
+  });
+});

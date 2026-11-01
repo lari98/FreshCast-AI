@@ -39,14 +39,15 @@ export function worstRisk(item: Item): Risk {
   );
 }
 
-export function itemMetrics(item: Item): ItemMetrics {
-  const cost = item.unit_price * COST_SHARE;
+export function itemMetrics(item: Item, costShare: number = COST_SHARE): ItemMetrics {
+  const cost = item.unit_price * costShare;
+  const marginShare = 1 - costShare;
   const p = item.proposal;
   const atRiskUnits = item.lots
     .filter((l) => l.days_left <= 1)
     .reduce((sum, l) => sum + l.quantity, 0);
   const wasteCost = p.outlook_waste_units * cost;
-  const lostMargin = p.outlook_lost_units * item.unit_price * MARGIN_SHARE;
+  const lostMargin = p.outlook_lost_units * item.unit_price * marginShare;
   return {
     key: itemKey(item),
     item,

@@ -14,6 +14,7 @@ interface Props {
   lang: Lang;
   t: Strings;
   onOpen: (key: string) => void;
+  costShare?: number;
 }
 
 const SYMBOL = { low: "●", medium: "▲", high: "■" } as const;
@@ -25,10 +26,10 @@ function hint(lot: Lot, t: Strings): string {
   return t.actOk;
 }
 
-export function ExpiryTab({ items, lang, t, onOpen }: Props) {
+export function ExpiryTab({ items, lang, t, onOpen, costShare = COST_SHARE }: Props) {
   const rows: Row[] = items
     .flatMap((item) =>
-      item.lots.map((lot) => ({ item, lot, value: lot.quantity * item.unit_price * COST_SHARE })),
+      item.lots.map((lot) => ({ item, lot, value: lot.quantity * item.unit_price * costShare })),
     )
     .sort((a, b) => a.lot.days_left - b.lot.days_left || b.value - a.value);
 
@@ -67,7 +68,7 @@ export function ExpiryTab({ items, lang, t, onOpen }: Props) {
                     {item.name[lang]}
                   </button>
                 </th>
-                <td>{item.store_id}</td>
+                <td className="nowrap">{item.store_id}</td>
                 <td>{formatNumber(lot.quantity, lang)}</td>
                 <td>{formatDate(lot.use_by, lang)}</td>
                 <td>{formatNumber(lot.days_left, lang)}</td>

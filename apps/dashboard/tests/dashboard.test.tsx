@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -27,6 +27,8 @@ const openTab = (name: RegExp) => userEvent.click(screen.getByRole("tab", { name
 
 beforeEach(() => {
   window.history.replaceState(null, "", "#");
+  window.localStorage.clear();
+  document.documentElement.removeAttribute("data-theme");
 });
 
 describe("Dashboard shell", () => {
@@ -48,9 +50,9 @@ describe("Dashboard shell", () => {
     await setup();
     screen.getByRole("tab", { name: "Übersicht" }).focus();
     await userEvent.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Bestellungen" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Filialvergleich" })).toHaveAttribute("aria-selected", "true");
     await userEvent.keyboard("{End}");
-    expect(screen.getByRole("tab", { name: "Modell" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Hilfe" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("keeps the tab in the URL hash", async () => {
@@ -74,13 +76,19 @@ describe("Dashboard shell", () => {
 });
 
 describe("Tabs", () => {
-  it("orders: filters, approves a selection and counts it for export", async () => {
+  it("orders: submit a selection, a reviewer approves it, then it can be exported", async () => {
     await setup();
     await openTab(/Bestellungen/);
     const first = screen.getAllByRole("checkbox", { name: /Zeile auswählen/ })[0]!;
     await userEvent.click(first);
-    await userEvent.click(screen.getByRole("button", { name: /Auswahl freigeben/ }));
-    expect(screen.getAllByText(/freigegeben/).length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole("button", { name: /Auswahl einreichen/ }));
+    expect(screen.getAllByText("eingereicht").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /CSV/ })).toBeDisabled();
+    await openTab(/^Freigabe$/);
+    await userEvent.selectOptions(screen.getByLabelText("Rolle"), "reviewer");
+    await userEvent.click(screen.getByRole("button", { name: /Alle eingereichten freigeben/ }));
+    await openTab(/Bestellungen/);
+    expect(screen.getAllByText(/✓ freigegeben/).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /CSV/ })).toBeEnabled();
     await userEvent.type(screen.getByRole("searchbox"), "zzzz-none");
     expect(screen.getByText(STRINGS.de.noItems)).toBeInTheDocument();
@@ -92,7 +100,7 @@ describe("Tabs", () => {
     expect(screen.getByRole("img", { name: /Nachfrage/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Prognosegüte der letzten Tage (nicht im Training)" })).toBeInTheDocument();
     expect(screen.queryByText(/es wird nichts bestellt/)).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Vorschlag freigeben" }));
+    await userEvent.click(screen.getByRole("button", { name: "Zur Freigabe einreichen" }));
     expect(screen.getByText(/es wird nichts bestellt/)).toBeInTheDocument();
   });
 
@@ -138,6 +146,53 @@ describe("Tabs", () => {
   });
 });
 
+describe("approval, settings and new tabs", () => {
+  it("a changed quantity needs a reason; only the reviewer approves", async () => {
+    await setup();
+    await openTab(/^Freigabe$/);
+    const plus = screen.getAllByRole("button", { name: /^Menge:.*\+\d+$/ })[0]!;
+    await userEvent.click(plus);
+    expect(screen.getByText("Für eine geänderte Menge ist ein Grund nötig.")).toBeInTheDocument();
+    const reason = screen.getAllByRole("combobox", { name: /^Grund:/ })[0]!;
+    await userEvent.selectOptions(reason, "promo");
+    await userEvent.click(screen.getAllByRole("button", { name: "Einreichen" })[0]!);
+    expect(screen.getAllByText("eingereicht").length).toBe(1);
+    // planner cannot approve
+    expect(screen.getByRole("button", { name: /Alle eingereichten freigeben/ })).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText("Rolle"), "reviewer");
+    await userEvent.click(screen.getByRole("button", { name: /Alle eingereichten freigeben/ }));
+    expect(screen.getByText(/✓ freigegeben/)).toBeInTheDocument();
+  });
+
+  it("settings: cost share changes the KPIs and is stored in the browser", async () => {
+    await setup();
+    const before = screen.getByText("Bestellwert (Einkauf)").closest("li")!.textContent;
+    await openTab(/Einstellungen/);
+    const slider = screen.getByRole("slider", { name: /Einkaufskosten/ });
+    fireEvent.change(slider, { target: { value: "70" } });
+    await openTab(/Übersicht/);
+    expect(screen.getByText("Bestellwert (Einkauf)").closest("li")!.textContent).not.toBe(before);
+    expect(JSON.parse(window.localStorage.getItem("freshcast.settings.v2")!).costShare).toBeGreaterThan(0.6);
+  });
+
+  it("settings: the theme switch sets data-theme", async () => {
+    await setup();
+    await openTab(/Einstellungen/);
+    await userEvent.selectOptions(screen.getByLabelText("Darstellung"), "dark");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  });
+
+  it("stores, markdowns and help render", async () => {
+    await setup();
+    await openTab(/Filialvergleich/);
+    expect(screen.getByRole("heading", { name: "Filialen im Vergleich" })).toBeInTheDocument();
+    await openTab(/Preisaktionen/);
+    expect(screen.getByText(/Annahme-Rechner/)).toBeInTheDocument();
+    await openTab(/Hilfe/);
+    expect(screen.getByText(/Vier-Augen-Prinzip: Eine zweite Person/)).toBeInTheDocument();
+  });
+});
+
 describe("csvCell", () => {
   it("neutralises spreadsheet formulas and quotes separators", () => {
     expect(csvCell("=SUM(A1)")).toBe("'=SUM(A1)");
@@ -147,7 +202,7 @@ describe("csvCell", () => {
 });
 
 describe("accessibility", () => {
-  it.each([/Übersicht/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Einsparungen/, /Daten/, /Modell/])(
+  it.each([/Übersicht/, /Filialvergleich/, /^Freigabe$/, /Preisaktionen/, /Einstellungen/, /Hilfe/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Einsparungen/, /Daten/, /Modell/])(
     "has no detectable violations on tab %s",
     async (name) => {
       const { container } = await setup();

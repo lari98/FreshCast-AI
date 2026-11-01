@@ -51,7 +51,7 @@ export function PlanTab({ items, lang, t, onOpen }: Props) {
                     {item.name[lang]}
                   </button>
                 </th>
-                <td>{item.store_id}</td>
+                <td className="nowrap">{item.store_id}</td>
                 {cells.map((c, i) => (
                   <td
                     key={dates[i]}

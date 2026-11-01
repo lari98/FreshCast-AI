@@ -13,7 +13,11 @@ export interface CategoryRow {
 }
 
 /** Forecast and waste per product group (7-day outlook, open days only). */
-export function byCategory(metrics: ItemMetrics[], fallback: string): CategoryRow[] {
+export function byCategory(
+  metrics: ItemMetrics[],
+  fallback: string,
+  costShare: number = COST_SHARE,
+): CategoryRow[] {
   const map = new Map<string, CategoryRow & { demandCost: number }>();
   for (const m of metrics) {
     const name = m.item.category || fallback;
@@ -27,7 +31,7 @@ export function byCategory(metrics: ItemMetrics[], fallback: string): CategoryRo
     row.forecastUnits += units;
     row.revenue[m.item.currency] += units * m.item.unit_price;
     row.wasteCost[m.item.currency] += m.wasteCost;
-    row.demandCost += units * m.item.unit_price * COST_SHARE;
+    row.demandCost += units * m.item.unit_price * costShare;
     map.set(name, row);
   }
   return [...map.values()]

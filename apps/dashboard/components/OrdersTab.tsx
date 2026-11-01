@@ -5,14 +5,16 @@ import { formatCurrency, formatNumber } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
 import type { ItemMetrics } from "@/lib/kpi";
 import type { Lang } from "@/lib/types";
+import type { Workflow } from "@/lib/workflow";
 
 type SortKey = "store" | "product" | "order" | "value" | "waste" | "lost" | "risk";
 const RISK_RANK = { low: 0, medium: 1, high: 2 } as const;
 
 interface Props {
   metrics: ItemMetrics[];
-  approved: ReadonlySet<string>;
-  onApprove: (keys: string[]) => void;
+  workflow: Workflow;
+  costShare: number;
+  onSubmit: (keys: string[]) => void;
   onOpen: (key: string) => void;
   lang: Lang;
   t: Strings;
@@ -37,7 +39,7 @@ export function csvCell(value: string | number): string {
   return /[";\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-export function OrdersTab({ metrics, approved, onApprove, onOpen, lang, t }: Props) {
+export function OrdersTab({ metrics, workflow, costShare, onSubmit, onOpen, lang, t }: Props) {
   const [query, setQuery] = useState("");
   const [onlyOrder, setOnlyOrder] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "value", dir: "desc" });
@@ -86,10 +88,11 @@ export function OrdersTab({ metrics, approved, onApprove, onOpen, lang, t }: Pro
   function exportCsv() {
     const header = ["store_id", "sku", "product", "order_units", "arrival_date", "currency", "order_cost"];
     const lines = [header.join(";")];
-    for (const m of metrics.filter((x) => approved.has(x.key))) {
+    for (const m of metrics.filter((x) => workflow[x.key]?.status === "approved")) {
+      const qty = workflow[m.key]?.qty ?? m.orderUnits;
       lines.push(
-        [m.item.store_id, m.item.sku, m.item.name[lang], m.orderUnits, m.item.proposal.arrival_date,
-          m.item.currency, m.orderCost.toFixed(2)].map(csvCell).join(";"),
+        [m.item.store_id, m.item.sku, m.item.name[lang], qty, m.item.proposal.arrival_date,
+          m.item.currency, (qty * m.item.unit_price * costShare).toFixed(2)].map(csvCell).join(";"),
       );
     }
     try {
@@ -104,7 +107,11 @@ export function OrdersTab({ metrics, approved, onApprove, onOpen, lang, t }: Pro
     }
   }
 
-  const approvedCount = metrics.filter((m) => approved.has(m.key)).length;
+  const approvedCount = metrics.filter((m) => workflow[m.key]?.status === "approved").length;
+  const statusText = (key: string) => {
+    const st = workflow[key]?.status ?? "draft";
+    return st === "approved" ? `✓ ${t.statusApproved}` : st === "submitted" ? t.statusSubmitted : st === "rejected" ? t.statusRejected : t.statusOpen;
+  };
 
   return (
     <section aria-labelledby="orders-h" className="card">
@@ -124,7 +131,7 @@ export function OrdersTab({ metrics, approved, onApprove, onOpen, lang, t }: Pro
           className="btn primary"
           disabled={selected.size === 0}
           onClick={() => {
-            onApprove([...selected]);
+            onSubmit([...selected]);
             setSelected(new Set());
           }}
         >
@@ -167,7 +174,7 @@ export function OrdersTab({ metrics, approved, onApprove, onOpen, lang, t }: Pro
                     onChange={() => toggle(m.key)}
                   />
                 </td>
-                <td>{m.item.store_id}</td>
+                <td className="nowrap">{m.item.store_id}</td>
                 <th scope="row">
                   <button type="button" className="link" onClick={() => onOpen(m.key)}>
                     {m.item.name[lang]}
@@ -178,7 +185,7 @@ export function OrdersTab({ metrics, approved, onApprove, onOpen, lang, t }: Pro
                 <td>{formatNumber(m.item.proposal.outlook_waste_units, lang)}</td>
                 <td>{formatNumber(m.item.proposal.outlook_lost_units, lang)}</td>
                 <td className={`risk risk-${m.worstRisk}`}>{t.risks[m.worstRisk]}</td>
-                <td>{approved.has(m.key) ? `✓ ${t.statusApproved}` : t.statusOpen}</td>
+                <td>{statusText(m.key)}</td>
               </tr>
             ))}
           </tbody>

@@ -13,9 +13,10 @@ interface Props {
   scope: Item[];
   lang: Lang;
   t: Strings;
+  costShare?: number;
 }
 
-export function ScenariosTab({ item, scope, lang, t }: Props) {
+export function ScenariosTab({ item, scope, lang, t, costShare = COST_SHARE }: Props) {
   const [s, setS] = useState<Scenario>(NEUTRAL);
   const n = (v: number) => formatNumber(v, lang);
   const base = ruleOrder(item.proposal);
@@ -26,7 +27,7 @@ export function ScenariosTab({ item, scope, lang, t }: Props) {
   const scopeCost = { EUR: 0, CHF: 0 };
   const scopeBaseCost = { EUR: 0, CHF: 0 };
   for (const i of scope) {
-    const c = i.unit_price * COST_SHARE;
+    const c = i.unit_price * costShare;
     scopeCost[i.currency] += ruleOrder(i.proposal, s) * c;
     scopeBaseCost[i.currency] += ruleOrder(i.proposal) * c;
   }

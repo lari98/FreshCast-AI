@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased (phase 13)
+- Dashboard redesign: new light/dark palette with a theme switch, grouped sidebar navigation (17 sections), settings for the cost share.
+- Approval tab with the four-eyes principle: planner edits a quantity (whole packs, reason required) and submits, reviewer approves or rejects; state kept in the browser (demo, not authentication).
+- Store comparison, markdown (price cut) what-if for expiring stock with stated assumptions, help and glossary.
 - Newsvendor (critical-ratio) order target with a per-SKU overage factor estimated on data before the evaluation window.
 - Policy replay: naive, v1 rule, newsvendor and planner played day by day over 3 months with FEFO, walk-forward models and a stock-conservation test. Report in `docs/ml/policy-replay.md`, ADR 0004.
 - Dashboard: Savings tab (policy comparison, waste per week, product groups) fed by `replay.json`. Synthetic data, assumed costs, not evidence of real savings.

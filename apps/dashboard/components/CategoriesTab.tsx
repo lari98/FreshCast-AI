@@ -8,10 +8,11 @@ interface Props {
   metrics: ItemMetrics[];
   lang: Lang;
   t: Strings;
+  costShare?: number;
 }
 
-export function CategoriesTab({ metrics, lang, t }: Props) {
-  const rows = byCategory(metrics, t.otherCategory);
+export function CategoriesTab({ metrics, lang, t, costShare }: Props) {
+  const rows = byCategory(metrics, t.otherCategory, costShare);
   if (rows.length === 0) return <p>{t.noItems}</p>;
   const maxRate = Math.max(0.0001, ...rows.map((r) => r.wasteRate ?? 0));
   return (
