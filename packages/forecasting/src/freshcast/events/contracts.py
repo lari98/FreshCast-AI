@@ -44,6 +44,11 @@ class ForecastChangeEvent(BaseModel):
         return value
 
 
-def affected_partition(event: ForecastChangeEvent) -> str:
+def partition_key(store_id: str, sku: str) -> str:
     """Return the logical dependency key (not a storage path)."""
-    return f"{event.store_id}:{event.sku}"
+    return f"{store_id}:{sku}"
+
+
+def affected_partition(event: ForecastChangeEvent) -> str:
+    """Return the dependency key of the partition an event invalidates."""
+    return partition_key(event.store_id, event.sku)
