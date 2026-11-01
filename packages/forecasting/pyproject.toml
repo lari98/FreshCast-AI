@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "freshcast"
 version = "0.1.0"
 description = "Domain core for FreshCast AI: perishable demand forecasting and waste-aware replenishment."
-readme = "../../README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = ["pydantic>=2.7,<3", "numpy>=1.26", "pandas>=2.2", "lightgbm>=4.3", "scikit-learn>=1.4"]
