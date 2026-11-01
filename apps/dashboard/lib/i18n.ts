@@ -54,7 +54,7 @@ export const STRINGS = {
     salesFile: "Absatzdatei (CSV)",
     stockFile: "Bestandsdatei (CSV, optional)",
     analyze: "Analysieren",
-    analyzing: "Analyse läuft – das kann einige Sekunden dauern …",
+    analyzing: "Analyse läuft – große Dateien brauchen bis zu einer Minute …",
     backToDemo: "Zurück zur Demo",
     uploadBanner: "Ergebnis aus deinen hochgeladenen Daten. Jede Bestellung muss ein Mensch freigeben.",
     apiDown:
@@ -124,7 +124,7 @@ export const STRINGS = {
     salesFile: "Sales file (CSV)",
     stockFile: "Stock file (CSV, optional)",
     analyze: "Analyse",
-    analyzing: "Analysing – this can take a few seconds …",
+    analyzing: "Analysing – large files take up to a minute …",
     backToDemo: "Back to demo",
     uploadBanner: "Result from your uploaded data. A person must approve every order.",
     apiDown:

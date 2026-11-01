@@ -36,3 +36,4 @@ Thumbs.db
 .vscode/
 dist/
 cdk.out/
+data/samples/large/

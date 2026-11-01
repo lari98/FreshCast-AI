@@ -24,7 +24,7 @@ Optional: `product_name` (Artikelname), `unit_price` (Preis), `shelf_life_days` 
 4. Plan: FEFO planner with the stock lots. Assumptions printed with the result: unit cost 60 % and margin 40 % of price, 1-day lead time, delivery Monday to Saturday.
 
 ## Limits and privacy
-5 MB, 500,000 rows, 300 series per upload. Files are processed in memory, not stored; only counts are logged, never row contents. For larger data use the batch pipeline.
+25 MB, 500,000 rows, 300 series per upload. Files are processed in memory, not stored; only counts are logged, never row contents. For larger data use the batch pipeline.
 
 ## Run it locally (Windows)
 1. `.\scripts\run-api.ps1` (Python 3.12+; creates `C:\dev\venv-freshcast`).

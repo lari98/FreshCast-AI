@@ -21,7 +21,7 @@ import pandas as pd
 from freshcast.data.calendar import is_holiday, is_store_open
 from freshcast.domain.entities import Country
 
-MAX_BYTES = 5 * 1024 * 1024
+MAX_BYTES = 25 * 1024 * 1024
 MAX_ROWS = 500_000
 MAX_SERIES = 300
 MIN_HISTORY_DAYS = 60
