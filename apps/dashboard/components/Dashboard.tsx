@@ -16,6 +16,7 @@ import type { Theme } from "./SettingsTab";
 import { StoresTab } from "./StoresTab";
 import { PRESETS, availableChains, availableCurrencies, availableMarkets, filterMarkets, presetFor } from "@/lib/markets";
 import { MapTab } from "./MapTab";
+import { UpdateWatcher } from "./UpdateWatcher";
 import { COST_SHARE } from "@/lib/kpi";
 import type { ItemMetrics } from "@/lib/kpi";
 import { decide, parseWorkflow, setQuantity, setReason, submit } from "@/lib/workflow";
@@ -253,6 +254,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   return (
     <>
       <a className="skip" href="#main">{t.skip}</a>
+      <UpdateWatcher t={t} busy={data?.source === "upload"} />
       <header className="top">
         <h1>{t.title}</h1>
         <div className="filters">

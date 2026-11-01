@@ -17,3 +17,11 @@ class Settings(BaseSettings):
     bedrock_region: str = "eu-central-1"
     # Allowed browser origins (JSON list in the environment). Empty = none.
     cors_origins: list[str] = []
+    # Optional ClamAV daemon for signature scans of uploads. If set and the
+    # daemon is unreachable, uploads are refused (fail closed).
+    clamd_host: str | None = None
+    clamd_port: int = 3310
+    # Per client address and minute. In-memory, so per process: a managed WAF or
+    # API Gateway throttle is still needed in front of a deployed API.
+    rate_limit_per_minute: int = 600
+    analyze_rate_limit_per_minute: int = 20

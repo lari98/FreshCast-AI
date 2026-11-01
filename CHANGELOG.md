@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (security hardening and live update)
+- Upload guard (`freshcast.security.upload_guard`): refuses disguised executables, archives, PDFs, Office files, images, scripts and markup payloads, NUL/control characters, oversized lines and columns, unsafe file names; cleans text cells (formula injection) and drops unsafe store/SKU ids; optional ClamAV scan that fails closed; refusals are logged without content.
+- API: security headers, request size limit, in-memory rate limit (uploads 20/min per address), upload checks on sales and stock files.
+- Dashboard: Content-Security-Policy (production build), browser-side upload check, automatic update watcher (`version.json`): a new deployment reloads the open tab, settings and approvals are kept, uploaded data is never reloaded away.
+- `scripts/run-dashboard.ps1`: stops an old server on the port and mirrors the repository every 2 seconds, so a `git pull` shows up in the open tab by hot reload.
+- Attack tests in phases (`docs/security/attack-testing.md`), `security.yml` workflow (pip-audit, npm audit, Bandit, CodeQL, attack tests, weekly). Found and fixed a 500 error on header-only uploads.
+- `docs/security/how-freshcast-is-protected.md`: what is protected and what is not.
+
 ## Unreleased (retail chains and market map)
 - Retail chain (Handelskette) as a second dimension next to the market: header switch, Settings checkboxes, upload column `chain` (aliases `Handelskette`, `Kette`, `retailer`, `banner`).
 - New *Marktkarte* tab: chain x country matrix (store count, items, loss ratio); the same chain can be compared across DE, AT and CH; a click filters to one chain in one country.

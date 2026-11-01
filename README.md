@@ -41,6 +41,7 @@ See `docs/architecture/api.md`.
 - [Architecture diagram](docs/architecture/diagram.md)
 - [Security review](docs/security/review-v0.1.0.md)
 - [Benchmark](docs/ml/benchmark.md) and [scale benchmark](docs/ml/scale-benchmark.md)
+- [Security: protection and attack testing](docs/security/how-freshcast-is-protected.md)
 - [Retail chains per market](docs/data/market-chains.md)
 - [Policy replay](docs/ml/policy-replay.md) and [ADR 0004](docs/adr/0004-profit-optimal-ordering.md)
 - [Changelog](CHANGELOG.md)

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Strings } from "@/lib/i18n";
 import { UploadError, analyzeUpload } from "@/lib/source";
 import type { DashboardData } from "@/lib/types";
+import { checkUpload } from "@/lib/uploadGuard";
 
 interface Props {
   t: Strings;
@@ -27,6 +28,13 @@ export function UploadPanel({ t, onData, onReset, showReset, upload = analyzeUpl
     setBusy(true);
     setProblems([]);
     try {
+      for (const file of [sales, stock]) {
+        const problem = file ? await checkUpload(file) : null;
+        if (file && problem) {
+          setProblems([`${file.name}: ${{ type: t.uploadBadType, size: t.uploadTooBig, binary: t.uploadBinary }[problem]}`]);
+          return;
+        }
+      }
       onData(await upload(sales, stock));
     } catch (error) {
       const list = error instanceof UploadError ? error.problems : ["?"];

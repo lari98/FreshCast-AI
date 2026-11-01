@@ -20,6 +20,12 @@ import pandas as pd
 
 from freshcast.data.calendar import is_holiday, is_store_open
 from freshcast.domain.entities import Country
+from freshcast.security.upload_guard import (
+    UploadRejected,
+    clean_text,
+    inspect_bytes,
+    is_safe_id,
+)
 
 MAX_BYTES = 25 * 1024 * 1024
 MAX_ROWS = 500_000
@@ -102,6 +108,10 @@ def read_csv_bytes(data: bytes, name: str = "file") -> pd.DataFrame:
     if len(data) > MAX_BYTES:
         raise IngestError([f"{name}: file larger than {MAX_BYTES // 2**20} MB"])
     try:
+        inspect_bytes(data, name)
+    except UploadRejected as exc:
+        raise IngestError([f"{name}: {exc.reason}"]) from exc
+    try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = data.decode("latin-1")  # common for older German exports
@@ -160,6 +170,9 @@ def clean_sales(
             "units_sold": _numeric(raw["units_sold"], comma),
         }
     )
+    for col in ("product_name", "category", "chain"):
+        if col in raw.columns:
+            raw = raw.assign(**{col: raw[col].map(clean_text)})
     for col, default in (
         ("product_name", None),
         ("category", None),
@@ -175,7 +188,10 @@ def clean_sales(
             df[col] = _numeric(raw[col], comma)
 
     bad = df["business_date"].isna() | df["units_sold"].isna()
-    bad |= (df["store_id"] == "") | (df["sku"] == "")
+    bad |= ~(
+        df["store_id"].map(is_safe_id).astype(bool)
+        & df["sku"].map(is_safe_id).astype(bool)
+    )
     if bad.sum() > 0.05 * len(df):
         raise IngestError(
             [
@@ -305,9 +321,13 @@ def clean_stock(raw: pd.DataFrame, as_of: date) -> tuple[pd.DataFrame, list[str]
             "use_by_date": _parse_dates(raw["use_by_date"]),
         }
     )
-    df["lot_id"] = raw["lot_id"].str.strip() if "lot_id" in raw.columns else ""
+    df["lot_id"] = raw["lot_id"].map(clean_text) if "lot_id" in raw.columns else ""
     warnings: list[str] = []
     bad = df["quantity"].isna() | (df["quantity"] < 0) | df["use_by_date"].isna()
+    bad |= ~(
+        df["store_id"].map(is_safe_id).astype(bool)
+        & df["sku"].map(is_safe_id).astype(bool)
+    )
     if bad.any():
         warnings.append(f"stock file: {int(bad.sum())} unreadable rows were dropped")
         df = df[~bad]

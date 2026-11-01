@@ -1,0 +1,76 @@
+name: Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1" # weekly: new advisories appear without any code change
+permissions:
+  contents: read
+jobs:
+  python-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Audit installed packages against known vulnerabilities
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          python -m pip install -e packages/forecasting -e "apps/api[dev]"
+          pip-audit --skip-editable
+  python-static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install bandit
+      - name: Bandit (medium severity and above fails the build)
+        run: bandit -q -r packages/forecasting/src apps/api/src infrastructure/cdk/src -ll
+  attack-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Phase 1 and 2 attack tests (hostile uploads, API abuse)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "packages/forecasting[dev]" -e "apps/api[dev]"
+          pytest packages/forecasting/tests/security apps/api/tests/test_security_phase2_api.py --no-cov
+  dashboard-dependencies:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+      - run: npm ci
+      - name: npm audit (production dependencies, high severity and above)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Phase 3 to 5 attack tests (script injection, hostile files, prompt injection, updater)
+        run: npx vitest run tests/security.test.tsx
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@v3

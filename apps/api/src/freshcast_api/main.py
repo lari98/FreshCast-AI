@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Engine
 
 from freshcast.assistant.client import BedrockConverseModel, TextModel
+from freshcast_api import hardening
 from freshcast_api.config import Settings
 from freshcast_api.db import make_engine, make_session_factory
 from freshcast_api.routers import analyze, inventory, proposals
@@ -43,6 +44,7 @@ def create_app(
             allow_methods=["GET", "POST"],
             allow_headers=["x-dev-user", "x-dev-role", "content-type"],
         )
+    hardening.install(app, settings)
     app.include_router(analyze.router)
     app.include_router(inventory.router)
     app.include_router(proposals.router)

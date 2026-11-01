@@ -37,3 +37,4 @@ Thumbs.db
 dist/
 cdk.out/
 data/samples/large/
+apps/dashboard/public/version.json

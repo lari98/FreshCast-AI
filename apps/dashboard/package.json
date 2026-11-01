@@ -4,7 +4,9 @@
   "private": true,
   "description": "FreshCast AI planner dashboard (demo-data driven, optional API source).",
   "scripts": {
+    "predev": "node scripts/write-version.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/write-version.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
