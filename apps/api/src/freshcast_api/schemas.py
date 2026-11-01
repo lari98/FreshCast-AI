@@ -60,3 +60,15 @@ class ProposalOut(BaseModel):
     status: str
     created_by: str
     approved_by: str | None
+
+
+class ExplanationOut(BaseModel):
+    """Explanation with provenance (AI transparency)."""
+
+    text: str
+    language: str
+    source: str  # "model" or "template"
+    ai_generated: bool
+    violations: list[str]
+    prompt_version: str
+    disclaimer: str

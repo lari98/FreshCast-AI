@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 
+from freshcast.assistant.facts import ExplanationFacts
+from freshcast.assistant.prompt import Language
+from freshcast.assistant.service import explain
 from freshcast.replenishment.engine import (
     ReplenishmentRequest,
     calculate_replenishment,
@@ -19,7 +22,7 @@ from freshcast.replenishment.engine import (
 from freshcast_api.deps import SessionDep
 from freshcast_api.models import OrderProposal, StockLot
 from freshcast_api.outbox import audit
-from freshcast_api.schemas import ProposalIn, ProposalOut
+from freshcast_api.schemas import ExplanationOut, ProposalIn, ProposalOut
 from freshcast_api.security import Principal, Role, require_role
 
 router = APIRouter(prefix="/v1/proposals", tags=["replenishment"])
@@ -96,3 +99,61 @@ def approve_proposal(
     audit(session, who, "proposal.approve", "order_proposal", str(proposal.id))
     session.commit()
     return proposal
+
+
+_DISCLAIMER = {
+    "model": "AI-generated text. Every number was checked against system data. "
+    "A store manager must approve the proposal.",
+    "template": "Standard text generated from system data without AI. "
+    "A store manager must approve the proposal.",
+}
+
+
+@router.get("/{proposal_id}/explanation", response_model=ExplanationOut)
+def explain_proposal(
+    proposal_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    who: AnyUser,
+    lang: Annotated[Language, Query()] = "en",
+) -> ExplanationOut:
+    """Explain a proposal in German or English from stored facts only."""
+    proposal = _get_or_404(session, proposal_id)
+    inputs = proposal.inputs
+    as_of = date.fromisoformat(str(inputs["as_of_date"]))
+    lead = int(str(inputs["supplier_lead_days"]))
+    facts = ExplanationFacts(
+        store_id=proposal.store_id,
+        sku=proposal.sku,
+        product_name=proposal.sku,  # no product catalogue yet
+        as_of_date=as_of,
+        arrival_date=as_of + timedelta(days=lead),
+        forecast_units=int(str(inputs["forecast_units"])),
+        safety_stock_units=int(str(inputs["safety_stock_units"])),
+        incoming_units=int(str(inputs["incoming_units"])),
+        usable_stock_units=proposal.usable_stock_units,
+        expiring_stock_units=proposal.expiring_stock_units,
+        blocked_units=0,  # holds are not stored in the database yet
+        target_stock_units=proposal.target_stock_units,
+        recommended_order_units=proposal.recommended_order_units,
+        order_multiple=int(str(inputs["order_multiple"])),
+        supplier_lead_days=lead,
+    )
+    result = explain(facts, lang, request.app.state.text_model)
+    audit(
+        session,
+        who,
+        f"proposal.explain.{result.source}",
+        "order_proposal",
+        str(proposal.id),
+    )
+    session.commit()
+    return ExplanationOut(
+        text=result.text,
+        language=result.language,
+        source=result.source,
+        ai_generated=result.ai_generated,
+        violations=list(result.violations),
+        prompt_version=result.prompt_version,
+        disclaimer=_DISCLAIMER[result.source],
+    )

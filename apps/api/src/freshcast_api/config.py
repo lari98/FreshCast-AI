@@ -12,3 +12,6 @@ class Settings(BaseSettings):
 
     env: str = "local"  # local | dev | prod
     database_url: str = "sqlite+pysqlite:///./freshcast_local.db"
+    # Bedrock model or EU inference-profile id; unset = deterministic text only.
+    bedrock_model_id: str | None = None
+    bedrock_region: str = "eu-central-1"

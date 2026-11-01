@@ -5,18 +5,26 @@ from __future__ import annotations
 from fastapi import FastAPI
 from sqlalchemy import Engine
 
+from freshcast.assistant.client import BedrockConverseModel, TextModel
 from freshcast_api.config import Settings
 from freshcast_api.db import make_engine, make_session_factory
 from freshcast_api.routers import inventory, proposals
 
 
 def create_app(
-    settings: Settings | None = None, engine: Engine | None = None
+    settings: Settings | None = None,
+    engine: Engine | None = None,
+    text_model: TextModel | None = None,
 ) -> FastAPI:
-    """Build the app; settings and engine are injectable for tests."""
+    """Build the app; settings, engine and text model are injectable for tests."""
     settings = settings or Settings()
     app = FastAPI(title="FreshCast AI API", version="0.1.0")
     app.state.settings = settings
+    if text_model is None and settings.bedrock_model_id:
+        text_model = BedrockConverseModel(
+            settings.bedrock_model_id, settings.bedrock_region
+        )
+    app.state.text_model = text_model
     app.state.session_factory = make_session_factory(
         engine or make_engine(settings.database_url)
     )
