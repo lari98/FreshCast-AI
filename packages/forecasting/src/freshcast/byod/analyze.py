@@ -107,11 +107,14 @@ def analyze(
         "unit_price",
         "product_name",
         "category",
+        "chain",
         "shelf_life_days",
         "pack_size",
     ):
         if col not in panel:
-            panel[col] = np.nan if col not in ("product_name", "category") else None
+            panel[col] = (
+                np.nan if col not in ("product_name", "category", "chain") else None
+            )
     price = panel["unit_price"].fillna(1.0)
     panel["unit_price"] = price
     future = _future_rows(panel, as_of_date)
@@ -259,6 +262,7 @@ def _item(
     return {
         "store_id": store,
         "city": store,
+        "chain": str(meta["chain"]) if pd.notna(meta["chain"]) else "",
         "currency": currency,
         "sku": sku,
         "name": {"de": name, "en": name},

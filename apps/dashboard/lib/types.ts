@@ -41,6 +41,8 @@ export interface Proposal {
 export interface Item {
   store_id: string;
   city: string;
+  /** Retail banner (Handelskette), optional; the demo uses fictional names. */
+  chain?: string;
   currency: "EUR" | "CHF";
   sku: string;
   name: Localised;

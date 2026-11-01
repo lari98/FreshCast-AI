@@ -13,6 +13,9 @@ interface Props {
   markets: string[]; // available in the data
   selectedMarkets: ReadonlySet<string>;
   onToggleMarket: (m: string) => void;
+  chains: string[];
+  selectedChains: ReadonlySet<string>;
+  onToggleChain: (c: string) => void;
   currencies: Currency[];
   selectedCurrencies: ReadonlySet<string>;
   onToggleCurrency: (c: string) => void;
@@ -20,7 +23,7 @@ interface Props {
 
 export function SettingsTab({
   costShare, onCost, theme, onTheme, onReset, t,
-  markets, selectedMarkets, onToggleMarket, currencies, selectedCurrencies, onToggleCurrency,
+  markets, selectedMarkets, onToggleMarket, chains, selectedChains, onToggleChain, currencies, selectedCurrencies, onToggleCurrency,
 }: Props) {
   return (
     <>
@@ -36,6 +39,17 @@ export function SettingsTab({
           </label>
         ))}
       </fieldset>
+      {chains.length > 0 && (
+        <fieldset className="checks">
+          <legend>{t.chainsLabel}</legend>
+          {chains.map((c) => (
+            <label key={c} className="check">
+              <input type="checkbox" checked={selectedChains.has(c)} onChange={() => onToggleChain(c)} />
+              {c}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <fieldset className="checks">
         <legend>{t.marketsCurrencies}</legend>
         {currencies.map((c) => (

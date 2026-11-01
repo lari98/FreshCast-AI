@@ -50,7 +50,7 @@ describe("Dashboard shell", () => {
     await setup();
     screen.getByRole("tab", { name: "Übersicht" }).focus();
     await userEvent.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Filialvergleich" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Marktkarte" })).toHaveAttribute("aria-selected", "true");
     await userEvent.keyboard("{End}");
     expect(screen.getByRole("tab", { name: "Hilfe" })).toHaveAttribute("aria-selected", "true");
   });
@@ -204,7 +204,7 @@ describe("market and currency filter", () => {
     expect(screen.getByLabelText("Bereich")).not.toHaveTextContent("Zurich");
     expect(screen.getByText("Bestellwert (Einkauf)").closest("li")!.textContent).not.toMatch(/CHF/);
     await openTab(/Bestellungen/);
-    expect(ordersRows()).toBe(8);
+    expect(ordersRows()).toBe(24);
   });
 
   it("Switzerland only: CHF only; Germany + Austria: EUR only", async () => {
@@ -234,7 +234,7 @@ describe("market and currency filter", () => {
     await openTab(/Einstellungen/);
     await userEvent.click(screen.getByRole("checkbox", { name: "CHF" }));
     await openTab(/Bestellungen/);
-    expect(ordersRows()).toBe(16);
+    expect(ordersRows()).toBe(40);
   });
 
   it("savings follow the selected market", async () => {
@@ -272,4 +272,44 @@ describe("accessibility", () => {
       expect(results.violations).toEqual([]);
     },
   );
+});
+
+describe("retail chains and the market map", () => {
+  const ordersRows = () => within(screen.getByRole("table")).getAllByRole("row").length - 1;
+
+  it("the chain select narrows every tab and combines with the market", async () => {
+    await setup();
+    await userEvent.selectOptions(screen.getByLabelText("Handelskette"), "PreisPunkt");
+    await openTab(/Bestellungen/);
+    expect(ordersRows()).toBe(24); // three stores x 8 SKUs
+    await userEvent.selectOptions(screen.getByLabelText("Markt"), "AT");
+    expect(ordersRows()).toBe(8);
+  });
+
+  it("the map lists a chain in each of its countries and a click filters to it", async () => {
+    await setup();
+    await openTab(/Marktkarte/);
+    const table = screen.getByRole("table");
+    const row = within(table).getByRole("row", { name: /PreisPunkt/ });
+    expect(row).toHaveTextContent("3 Länder");
+    expect(within(table).getByRole("row", { name: /MarktHaus/ })).toHaveTextContent("Nur in");
+    await userEvent.click(within(row).getByRole("button", { name: /Schweiz/ }));
+    expect(screen.getByLabelText("Handelskette")).toHaveValue("PreisPunkt");
+    expect(screen.getByLabelText("Markt")).toHaveValue("CH");
+    await openTab(/Bestellungen/);
+    expect(ordersRows()).toBe(8);
+    await openTab(/Marktkarte/);
+    await userEvent.click(screen.getByRole("button", { name: "Alle Ketten und Märkte zeigen" }));
+    expect(screen.getByLabelText("Handelskette")).toHaveValue("");
+  });
+
+  it("savings follow the chain filter and remember it in the browser", async () => {
+    await setup();
+    await openTab(/Einstellungen/);
+    await userEvent.click(screen.getByRole("checkbox", { name: "AlpenFrisch" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "MarktHaus" }));
+    expect(JSON.parse(window.localStorage.getItem("freshcast.settings.v2")!).chains).toEqual(["PreisPunkt"]);
+    await openTab(/Einsparungen/);
+    expect(screen.getAllByText(/Handelsketten: PreisPunkt/).length).toBeGreaterThan(0);
+  });
 });

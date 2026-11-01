@@ -38,7 +38,7 @@ from typing import Any
 
 import pandas as pd
 
-from freshcast.data.synthetic import PRODUCTS
+from freshcast.data.synthetic import PRODUCTS, STORES
 from freshcast.domain.entities import Product
 from freshcast.features.builder import build_features
 from freshcast.models.baseline import seasonal_naive
@@ -51,6 +51,7 @@ from freshcast.replenishment.engine import (
 from freshcast.replenishment.newsvendor import critical_ratio, newsvendor_target
 from freshcast.replenishment.planner import DemandScenarios, PlanningRequest, plan_order
 
+CHAINS = {store.store_id: store.chain for store in STORES}
 POLICIES = ("naive", "rule_v1", "newsvendor", "planner")
 COST_SHARE = 0.6
 MARGIN_SHARE = 0.4
@@ -365,6 +366,7 @@ def run_replay(sales: pd.DataFrame, cfg: ReplayConfig) -> ReplayResult:
             {
                 "store_id": s.store_id,
                 "sku": s.sku,
+                "chain": CHAINS.get(s.store_id, ""),
                 "currency": s.currency,
                 "category": s.product.category,
                 "cost": s.cost,
@@ -413,42 +415,51 @@ def summarise(result: ReplayResult) -> pd.DataFrame:
     ).reset_index(drop=True)
 
 
-def market_summary(result: ReplayResult) -> dict[str, Any]:
-    """Headline numbers per market (country prefix of the store id) and policy."""
+def segments(result: ReplayResult) -> list[dict[str, Any]]:
+    """Raw sums per market, chain and policy, so a UI can filter and re-aggregate.
+
+    Ratios are not stored: they must be recomputed from sums after filtering.
+    """
     df = _counted(result)
     df["market"] = df["store_id"].str.split("-").str[0]
-    g = df.groupby(["market", "currency", "policy"], as_index=False).agg(
+    g = df.groupby(["market", "chain", "currency", "policy"], as_index=False).agg(
         received=("received", "sum"),
         demand=("demand", "sum"),
         sold=("sold", "sum"),
+        lost=("lost", "sum"),
         waste=("waste", "sum"),
+        revenue=("revenue", "sum"),
         waste_cost=("waste_cost", "sum"),
         lost_margin=("lost_margin", "sum"),
         profit=("profit", "sum"),
     )
-    out: dict[str, Any] = {}
-    for market, sub in g.groupby("market"):
-        base = sub[sub["policy"] == "naive"].iloc[0].to_dict()
-        policies: dict[str, Any] = {}
-        for r in sub.to_dict("records"):
-            demand, received = float(r["demand"]), float(r["received"])
-            policies[str(r["policy"])] = {
-                "profit": round(float(r["profit"]), 2),
-                "waste_cost": round(float(r["waste_cost"]), 2),
-                "lost_margin": round(float(r["lost_margin"]), 2),
-                "fill_rate": round(float(r["sold"]) / demand, 4) if demand else 0.0,
-                "waste_rate": round(float(r["waste"]) / received, 4)
-                if received
-                else 0.0,
-                "profit_vs_naive": _pct(float(r["profit"]), float(base["profit"])),
-                "waste_cost_vs_naive": _pct(
-                    float(r["waste_cost"]), float(base["waste_cost"])
-                ),
+    out: list[dict[str, Any]] = []
+    for (market, chain, currency), sub in g.groupby(["market", "chain", "currency"]):
+        policies = {
+            str(r["policy"]): {
+                k: round(float(r[k]), 2)
+                for k in (
+                    "received",
+                    "demand",
+                    "sold",
+                    "lost",
+                    "waste",
+                    "revenue",
+                    "waste_cost",
+                    "lost_margin",
+                    "profit",
+                )
             }
-        out[str(market)] = {
-            "currency": str(sub["currency"].iloc[0]),
-            "policies": policies,
+            for r in sub.to_dict("records")
         }
+        out.append(
+            {
+                "market": str(market),
+                "chain": str(chain),
+                "currency": str(currency),
+                "policies": policies,
+            }
+        )
     return out
 
 
@@ -550,7 +561,7 @@ def to_json(result: ReplayResult) -> dict[str, Any]:
         "to": (cfg.start + timedelta(days=cfg.days - 1)).isoformat(),
         "series": int(len(result.meta)),
         "policies": policies,
-        "markets": market_summary(result),
+        "segments": segments(result),
         "weekly": weekly,
         "categories": categories,
     }

@@ -105,3 +105,14 @@ def test_no_stock_file_is_flagged(one_store: pd.DataFrame) -> None:
     payload = analyze(_csv(one_store))
     assert any("no stock file" in w for w in payload["quality"]["warnings"])
     assert all(i["lots"] == [] for i in payload["items"])
+
+
+def test_chain_column_is_read_with_german_alias(one_store: pd.DataFrame) -> None:
+    with_chain = one_store.assign(Handelskette="Beispielkette")
+    payload = analyze(_csv(with_chain))
+    assert {i["chain"] for i in payload["items"]} == {"Beispielkette"}
+
+
+def test_chain_is_optional(one_store: pd.DataFrame) -> None:
+    payload = analyze(_csv(one_store))
+    assert {i["chain"] for i in payload["items"]} == {""}

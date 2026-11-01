@@ -45,3 +45,22 @@ Germany). Deselected markets and currencies are hidden in every tab, including t
 store list, the Approval workflow, alerts and the Savings replay, which is split by
 market in `replay.json`. The choice is kept in the browser (localStorage). Uploaded
 files whose store ids have no country prefix fall into "Other" and show without the switch.
+
+## Retail chains and the market map
+Every item can carry a retail chain (Handelskette). The same chain may sell in several
+countries, so the chain is a second dimension next to the market, not part of it.
+
+- Header **Handelskette** switch and *Settings* checkboxes filter every tab. Items with no
+  chain (for example uploads without that column) are never hidden by the chain filter.
+- **Marktkarte** tab: a chain x country matrix of the whole network with store count,
+  item count and loss ratio per cell. A chain active in several countries shows one cell
+  per country. Clicking a cell shows only that chain in that country; a button resets.
+  It is a matrix, not a geographic map.
+- **Savings** uses `segments` in `replay.json` (market x chain x policy raw sums) and
+  recomputes fill rate, waste rate and profit change from the sums for the selection.
+  Ratios are never stored per segment because averaging ratios would be wrong.
+  The weekly and category tables still cover the whole network.
+- Upload: a column `chain` (also `Handelskette`, `Kette`, `retailer`, `banner`) is read.
+- The demo chains (MarktHaus, PreisPunkt, AlpenFrisch) are **fictional**. Real chains are
+  not attached to synthetic numbers; see `docs/data/market-chains.md`.
+

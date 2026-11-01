@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AS_OF = date(2025, 12, 22)  # Monday; the model never saw data after AS_OF - 14
 HISTORY_DAYS = 14
 HORIZON = 2
-DEMO_STORES = ("DE-MUC-001", "AT-VIE-001", "CH-ZRH-001")
+DEMO_STORES = tuple(store.store_id for store in STORES)  # all seven demo stores
 LANGS = ("de", "en")
 
 
@@ -142,6 +142,7 @@ def main() -> None:
                 {
                     "store_id": store_id,
                     "city": stores[store_id].city,
+                    "chain": stores[store_id].chain,
                     "currency": stores[store_id].currency.value,
                     "sku": product.sku,
                     "name": {"de": product.name_de, "en": product.name_en},

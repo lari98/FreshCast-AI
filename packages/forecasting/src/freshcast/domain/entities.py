@@ -31,6 +31,7 @@ class Store:
     city: str
     currency: Currency
     size_factor: float  # relative footfall; 1.0 = average store
+    chain: str = ""  # retail banner (fictional in the demo data)
 
 
 @dataclass(frozen=True, slots=True)

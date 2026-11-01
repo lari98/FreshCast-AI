@@ -1,6 +1,6 @@
 import { formatCurrency, formatDate, formatNumber, formatPercent } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
-import { POLICY_IDS, change } from "@/lib/replay";
+import { POLICY_IDS, aggregateSegments, change } from "@/lib/replay";
 import type { PolicyId, PolicyStats, Replay } from "@/lib/replay";
 import type { Lang } from "@/lib/types";
 
@@ -10,33 +10,32 @@ interface Props {
   lang: Lang;
   t: Strings;
   markets?: ReadonlySet<string>;
+  chains?: ReadonlySet<string>;
   currencies?: ReadonlySet<string>;
 }
 
 const signed = (v: number | null, lang: Lang) =>
   v === null ? "–" : `${v > 0 ? "+" : ""}${formatPercent(v, lang, 1)}`;
 
-export function SavingsTab({ replay, failed, lang, t, markets, currencies: selCur }: Props) {
+export function SavingsTab({ replay, failed, lang, t, markets, chains, currencies: selCur }: Props) {
   if (failed) return <p role="alert">{t.replayError}</p>;
   if (!replay) return <p role="status">{t.loading}</p>;
 
   const names: Record<PolicyId, string> = {
     naive: t.polNaive, rule_v1: t.polRule, newsvendor: t.polNewsvendor, planner: t.polPlanner,
   };
-  // One block per selected market (DE, AT, CH); old files without markets fall back to currencies.
-  const blocks: { id: string; title: string; currency: string; stats: Record<PolicyId, PolicyStats | undefined> }[] =
-    replay.markets
-      ? Object.entries(replay.markets)
-          .filter(([m, v]) => (!markets || markets.has(m)) && (!selCur || selCur.has(v.currency)))
-          .sort(([a], [b]) => ["DE", "AT", "CH"].indexOf(a) - ["DE", "AT", "CH"].indexOf(b))
-          .map(([m, v]) => ({
-            id: m, title: t.marketNames[m] ?? m, currency: v.currency,
-            stats: v.policies as unknown as Record<PolicyId, PolicyStats | undefined>,
-          }))
+  // One block per selected market (DE, AT, CH), summed over the selected chains.
+  // Files without segments fall back to one block per currency.
+  const blocks: { id: string; title: string; currency: string; chains: string[]; stats: Record<PolicyId, PolicyStats | undefined> }[] =
+    replay.segments
+      ? aggregateSegments(replay.segments, markets ?? null, chains ?? null, selCur ?? null).map((b) => ({
+          id: b.market, title: t.marketNames[b.market] ?? b.market, currency: b.currency, chains: b.chains,
+          stats: b.stats as Record<PolicyId, PolicyStats | undefined>,
+        }))
       : Object.keys(replay.policies.naive)
           .filter((c) => !selCur || selCur.has(c))
           .map((c) => ({
-            id: c, title: c, currency: c,
+            id: c, title: c, currency: c, chains: [],
             stats: Object.fromEntries(POLICY_IDS.map((p) => [p, replay.policies[p][c]])) as Record<PolicyId, PolicyStats | undefined>,
           }));
   if (blocks.length === 0) return <p>{t.marketsNone}</p>;
@@ -74,6 +73,7 @@ export function SavingsTab({ replay, failed, lang, t, markets, currencies: selCu
       {blocks.map((b) => (
         <section key={b.id} aria-labelledby={`pol-${b.id}`} className="card">
           <h2 id={`pol-${b.id}`}>{t.savPolicies} ({b.title}, {b.currency})</h2>
+          {b.chains.length > 0 && <p className="hint">{t.chainsLabel}: {b.chains.join(", ")}</p>}
           <div className="scroll" tabIndex={0} role="region" aria-label={`${t.savPolicies} ${b.title} – ${t.tableLabel}`}>
             <table>
               <thead>

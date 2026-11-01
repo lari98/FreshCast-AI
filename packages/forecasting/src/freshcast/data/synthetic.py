@@ -25,14 +25,17 @@ from freshcast.domain.entities import (
     Store,
 )
 
+# Chains are FICTIONAL banners that mimic a typical DACH landscape: a national
+# supermarket (DE only), a discounter active in all three countries, and an
+# Alpine regional chain (AT + CH). No real company is represented.
 STORES: tuple[Store, ...] = (
-    Store("DE-MUC-001", Country.DE, "Munich", Currency.EUR, 1.3),
-    Store("DE-BER-001", Country.DE, "Berlin", Currency.EUR, 1.1),
-    Store("DE-ING-001", Country.DE, "Ingolstadt", Currency.EUR, 0.8),
-    Store("AT-VIE-001", Country.AT, "Vienna", Currency.EUR, 1.2),
-    Store("AT-GRZ-001", Country.AT, "Graz", Currency.EUR, 0.9),
-    Store("CH-ZRH-001", Country.CH, "Zurich", Currency.CHF, 1.2),
-    Store("CH-PFA-001", Country.CH, "Pfaeffikon SZ", Currency.CHF, 0.7),
+    Store("DE-MUC-001", Country.DE, "Munich", Currency.EUR, 1.3, "MarktHaus"),
+    Store("DE-BER-001", Country.DE, "Berlin", Currency.EUR, 1.1, "PreisPunkt"),
+    Store("DE-ING-001", Country.DE, "Ingolstadt", Currency.EUR, 0.8, "MarktHaus"),
+    Store("AT-VIE-001", Country.AT, "Vienna", Currency.EUR, 1.2, "PreisPunkt"),
+    Store("AT-GRZ-001", Country.AT, "Graz", Currency.EUR, 0.9, "AlpenFrisch"),
+    Store("CH-ZRH-001", Country.CH, "Zurich", Currency.CHF, 1.2, "PreisPunkt"),
+    Store("CH-PFA-001", Country.CH, "Pfaeffikon SZ", Currency.CHF, 0.7, "AlpenFrisch"),
 )
 
 PRODUCTS: tuple[Product, ...] = (

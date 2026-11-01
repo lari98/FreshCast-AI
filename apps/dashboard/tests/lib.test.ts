@@ -42,7 +42,7 @@ describe("kpi", () => {
     const eur = metrics.filter((m) => m.item.currency === "EUR").reduce((s, m) => s + m.orderCost, 0);
     expect(t.orderCost.EUR).toBeCloseTo(eur);
     expect(t.orderCost.CHF).toBeGreaterThan(0);
-    expect(t.items).toBe(24);
+    expect(t.items).toBe(56);
   });
   it("ranks the attention list by value, highest first", () => {
     const list = attentionList(metrics, 5);
@@ -135,7 +135,10 @@ describe("markdown what-if", () => {
   });
 });
 
-import { availableMarkets, filterMarkets, marketOf, presetFor } from "@/lib/markets";
+import { availableChains, availableMarkets, chainOf, filterMarkets, marketOf, presetFor } from "@/lib/markets";
+import { chainMap } from "@/lib/chainmap";
+import { aggregateSegments } from "@/lib/replay";
+import type { Segment } from "@/lib/replay";
 
 describe("markets", () => {
   it("reads the country from the store id", () => {
@@ -146,7 +149,7 @@ describe("markets", () => {
   it("filters by market and currency together", () => {
     expect(availableMarkets(data.items)).toEqual(["DE", "AT", "CH"]);
     const de = filterMarkets(data.items, new Set(["DE"]), null);
-    expect(de.length).toBe(8);
+    expect(de.length).toBe(24);
     expect(de.every((i) => i.store_id.startsWith("DE-"))).toBe(true);
     expect(filterMarkets(data.items, null, new Set(["CHF"])).every((i) => i.currency === "CHF")).toBe(true);
     expect(filterMarkets(data.items, new Set(["DE"]), new Set(["CHF"]))).toEqual([]);
@@ -158,5 +161,48 @@ describe("markets", () => {
     expect(presetFor(new Set(["AT"]), avail)).toBe("AT");
     expect(presetFor(new Set(["DE", "AT"]), avail)).toBe("DE+AT");
     expect(presetFor(new Set(["AT", "CH"]), avail)).toBe("custom");
+  });
+});
+
+describe("retail chains", () => {
+  it("lists the chains and filters by them without hiding chain-less items", () => {
+    expect(availableChains(data.items)).toEqual(["AlpenFrisch", "MarktHaus", "PreisPunkt"]);
+    const pp = filterMarkets(data.items, null, null, new Set(["PreisPunkt"]));
+    expect(pp.length).toBeGreaterThan(0);
+    expect(pp.every((i) => chainOf(i) === "PreisPunkt")).toBe(true);
+    const bare = { ...data.items[0]!, chain: undefined };
+    expect(filterMarkets([bare], null, null, new Set(["PreisPunkt"]))).toHaveLength(1);
+  });
+
+  it("shows the same chain in several countries on the map", () => {
+    const map = chainMap(data.items.map((i) => itemMetrics(i)), ["DE", "AT", "CH"]);
+    const pp = map.rows.find((r) => r.chain === "PreisPunkt")!;
+    expect(pp.countries).toEqual(["DE", "AT", "CH"]);
+    expect(map.rows.find((r) => r.chain === "MarktHaus")!.countries).toEqual(["DE"]);
+    expect(map.rows.find((r) => r.chain === "AlpenFrisch")!.countries).toEqual(["AT", "CH"]);
+    expect(pp.cells.DE!.stores).toBe(1);
+  });
+
+  const seg = (market: string, chain: string, sold: number, demand: number): Segment => {
+    const sums = { received: 100, demand, sold, lost: demand - sold, waste: 5, revenue: 10, waste_cost: 2, lost_margin: 1, profit: 8 };
+    return { market, chain, currency: "EUR", policies: { naive: sums, rule_v1: { ...sums, profit: 9 } } };
+  };
+  it("rebuilds ratios from sums, not from ratios", () => {
+    const blocks = aggregateSegments([seg("DE", "A", 90, 100), seg("DE", "B", 10, 20)], null, null, null);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.stats.naive!.fill_rate).toBeCloseTo(100 / 120);
+    expect(blocks[0]!.stats.rule_v1!.profit_vs_naive).toBeCloseTo(18 / 16 - 1);
+    expect(blocks[0]!.chains).toEqual(["A", "B"]);
+    const onlyB = aggregateSegments([seg("DE", "A", 90, 100), seg("DE", "B", 10, 20)], null, new Set(["B"]), null);
+    expect(onlyB[0]!.stats.naive!.fill_rate).toBeCloseTo(0.5);
+  });
+  it("matches the full replay when everything is selected", () => {
+    const replay = JSON.parse(readFileSync(join(__dirname, "../public/demo/replay.json"), "utf-8"));
+    const blocks = aggregateSegments(replay.segments, null, null, null);
+    const eur = blocks.filter((b) => b.currency === "EUR");
+    const profit = eur.reduce((s, b) => s + b.stats.newsvendor!.profit, 0);
+    expect(profit).toBeCloseTo(replay.policies.newsvendor.EUR.profit, 0);
+    const nv = replay.policies.newsvendor.EUR;
+    expect(nv.profit_vs_naive).toBeCloseTo(profit / eur.reduce((s, b) => s + b.stats.naive!.profit, 0) - 1, 3);
   });
 });

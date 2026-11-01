@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (retail chains and market map)
+- Retail chain (Handelskette) as a second dimension next to the market: header switch, Settings checkboxes, upload column `chain` (aliases `Handelskette`, `Kette`, `retailer`, `banner`).
+- New *Marktkarte* tab: chain x country matrix (store count, items, loss ratio); the same chain can be compared across DE, AT and CH; a click filters to one chain in one country.
+- Demo data now covers all seven stores (56 items) with three fictional chains (MarktHaus, PreisPunkt, AlpenFrisch); no real company is shown with synthetic numbers.
+- `replay.json` stores market x chain x policy raw sums (`segments`); the Savings tab recomputes ratios from sums for the active filter.
+- `scripts/run-dashboard.ps1` refreshes the Windows copy and starts the dashboard; a version footer shows the build, so an old copy is easy to spot.
+- `docs/data/market-chains.md`: how chains and markets fit together, with real DACH chains as orientation only.
+
 ## Unreleased (phase 13)
 - Market and currency filter: show Germany, Austria and Switzerland (or any combination, EUR and/or CHF) across all tabs; header presets, Settings checkboxes, saved in the browser. The Savings replay is now split by market.
 - Dashboard redesign: new light/dark palette with a theme switch, grouped sidebar navigation (17 sections), settings for the cost share.

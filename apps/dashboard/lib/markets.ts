@@ -22,14 +22,30 @@ export function availableCurrencies(items: Item[]): Currency[] {
   return CURRENCIES.filter((c) => present.has(c));
 }
 
-/** Items that belong to a selected market AND have a selected currency. */
+/** Retail chain of an item ("" when the data has none). */
+export const chainOf = (item: Pick<Item, "chain">): string => item.chain?.trim() ?? "";
+
+/** Chains that exist in the data, sorted by name. Empty when no item has a chain. */
+export function availableChains(items: Item[]): string[] {
+  return [...new Set(items.map(chainOf).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Items that belong to a selected market, have a selected currency and belong to
+ * a selected chain. Items without a chain (for example uploads) are not hidden by
+ * the chain filter, because the user cannot select "no chain".
+ */
 export function filterMarkets(
   items: Item[],
   markets: ReadonlySet<string> | null,
   currencies: ReadonlySet<string> | null,
+  chains: ReadonlySet<string> | null = null,
 ): Item[] {
   return items.filter(
-    (i) => (!markets || markets.has(marketOf(i))) && (!currencies || currencies.has(i.currency)),
+    (i) =>
+      (!markets || markets.has(marketOf(i))) &&
+      (!currencies || currencies.has(i.currency)) &&
+      (!chains || !chainOf(i) || chains.has(chainOf(i))),
   );
 }
 
