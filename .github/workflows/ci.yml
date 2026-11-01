@@ -36,3 +36,26 @@ jobs:
         run: bandit -q -r src
       - name: Tests (coverage gate 85%)
         run: pytest
+
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Types
+        run: npm run typecheck
+      - name: Tests (incl. axe accessibility check)
+        run: npm test
+      - name: Build (static export)
+        run: npm run build
