@@ -29,7 +29,7 @@ independent audit or penetration test, and the project is not deployed.
 | 3 | CDK does not grant `bedrock:InvokeModel` or define an API/Lambda front end | Medium |
 | 4 | No rate limiting / WAF; no CloudWatch dashboards or alarms on business metrics | Medium |
 | 5 | Dashboard has no auth; approve button is client-only | Medium |
-| 6 | Prediction interval under-calibrated (about 72% coverage vs 80% target) | Medium (quality) |
+| 6 | ~~Prediction interval under-calibrated~~ Fixed in phase 11 (conformal calibration, 80.9% coverage on synthetic data; still to be re-checked on real data) | Closed |
 | 7 | GitHub OIDC deploy role not created; no deployment has been exercised | Low |
 | 8 | Colour contrast of dashboard not verified in a real browser | Low |
 

@@ -18,7 +18,7 @@ by at least the forecast horizon (2 days). Closed days are forecast as zero by r
 about 18 % (baseline) to about 12 %, with +1.5 % bias.
 
 **Known limitations**
-- Prediction intervals are too narrow: about 72 % coverage versus 80 % nominal.
+- Intervals are conformally calibrated (CQR, per SKU). Backtest coverage is 80.9 % versus 80 % nominal on synthetic data; it is measured, not guaranteed, because demand is not perfectly exchangeable over time. Calibration holds out the last 28 days, which cost about 0.5 points of WAPE (12.1 % to 12.6 %).
   Do not size safety stock from them without calibration (e.g. conformal).
 - Accuracy on real retail data is unknown; synthetic noise is Gaussian and
   the generator's patterns are simple.

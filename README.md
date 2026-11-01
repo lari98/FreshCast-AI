@@ -29,11 +29,13 @@ See `docs/architecture/api.md`.
 ## Roadmap
 1 Foundation (done) - 2 DACH demo data (done) - 3 API & DB (done) - 4 Forecast engine (done) -
 5 Replenishment v2 (done) - 6 Incremental events (done) - 7 AWS & MLOps (code done, not deployed) -
-8 Bedrock assistant (done) - 9 Dashboard (done) - 10 Security & release (done, v0.1.0).
+8 Bedrock assistant (done) - 9 Dashboard (done) - 10 Security & release (done, v0.1.0) -
+11 Calibrated intervals + scale benchmark (done) - 12 Bring-your-own-data (next) -
+13 Profit-optimal ordering + policy replay (next).
 
 
 ## More
 - [Architecture diagram](docs/architecture/diagram.md)
 - [Security review](docs/security/review-v0.1.0.md)
-- [Benchmark](docs/ml/benchmark.md)
+- [Benchmark](docs/ml/benchmark.md) and [scale benchmark](docs/ml/scale-benchmark.md)
 - [Changelog](CHANGELOG.md)

@@ -43,13 +43,15 @@ def train(
     fit_part = feats[feats["business_date"] < start - pd.Timedelta(days=horizon)]
     test = feats[(feats["business_date"] >= start) & feats["is_open"]]
 
-    pred = DemandForecaster().fit(fit_part).predict(test)
+    pred = DemandForecaster(calibration_days=28).fit(fit_part).predict(test)
     y = test["units_sold"].to_numpy(dtype=np.float64)
     base = seasonal_naive(test).to_numpy(dtype=np.float64)
     model_wape = wape(y, pred["point"].to_numpy(dtype=np.float64))
     base_wape = wape(y, base)
 
-    final = DemandForecaster().fit(feats)  # production model sees all history
+    final = DemandForecaster(calibration_days=28).fit(
+        feats
+    )  # production model sees all history
     model_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(final, model_dir / "model.joblib")
     metrics: dict[str, Any] = {

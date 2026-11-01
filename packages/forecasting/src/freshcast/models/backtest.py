@@ -41,6 +41,7 @@ def run_backtest(
     origins: list[date],
     horizon: int = 2,
     test_days: int = 28,
+    calibration_days: int = 28,
 ) -> tuple[list[FoldResult], pd.DataFrame]:
     """Run all folds; return fold metrics and per-SKU model WAPE."""
     feats = build_features(sales, horizon)
@@ -55,7 +56,7 @@ def run_backtest(
             & (feats["business_date"] < end)
             & feats["is_open"]
         ]
-        model = DemandForecaster().fit(train)
+        model = DemandForecaster(calibration_days=calibration_days).fit(train)
         pred = model.predict(test)
         base = seasonal_naive(test)
         y = test["units_sold"].to_numpy(dtype=np.float64)

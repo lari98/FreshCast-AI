@@ -54,11 +54,20 @@ def build_features(sales: pd.DataFrame, horizon: int = 2) -> pd.DataFrame:
 
     for k in LAGS:
         df[f"lag_{k}"] = grouped.shift(k)
+    # Rolling means over trading days, issued `horizon` days before the target.
+    # Computed from grouped cumulative sums (vectorised), not a per-group Python
+    # lambda: the lambda version needs one call per series and does not scale to
+    # tens of thousands of series. Equivalent to
+    # ``s.shift(horizon).rolling(w, min_periods=1).mean()``.
+    known = grouped.shift(horizon)
+    valid = known.notna().astype(np.float64)
+    keys = [df["store_id"], df["sku"]]
+    cum_sum = known.fillna(0.0).groupby(keys).cumsum()
+    cum_cnt = valid.groupby(keys).cumsum()
     for w in WINDOWS:
-        # shift(horizon) first: the window must end at the forecast issue date.
-        df[f"mean_{w}"] = grouped.transform(
-            lambda s, w=w: s.shift(horizon).rolling(w, min_periods=1).mean()
-        )
+        win_sum = cum_sum - cum_sum.groupby(keys).shift(w, fill_value=0.0)
+        win_cnt = cum_cnt - cum_cnt.groupby(keys).shift(w, fill_value=0.0)
+        df[f"mean_{w}"] = (win_sum / win_cnt.where(win_cnt > 0)).to_numpy()
 
     dates = df["business_date"]
     doy = dates.dt.day_of_year.to_numpy()
