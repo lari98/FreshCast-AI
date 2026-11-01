@@ -20,10 +20,13 @@ pip install -e ".[dev]"
 ruff format . && ruff check . && mypy && pytest
 ```
 
+## Forecasting
+Backtest: `python -m freshcast.models.backtest` (results in `docs/ml/`).
+
 ## API
 See `docs/architecture/api.md`.
 
 ## Roadmap
-1 Foundation (done) - 2 DACH demo data (done) - 3 API & DB (done) - 4 Forecast engine -
+1 Foundation (done) - 2 DACH demo data (done) - 3 API & DB (done) - 4 Forecast engine (done) -
 5 Replenishment v2 (depletion/FEFO) - 6 Incremental events - 7 AWS & MLOps -
 8 Bedrock assistant - 9 Dashboard - 10 Security & release.

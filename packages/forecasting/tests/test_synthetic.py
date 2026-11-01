@@ -73,3 +73,15 @@ def test_write_dataset_creates_csv_files(tmp_path: Path) -> None:
     assert len(rows) == len(STORES) * len(PRODUCTS) * 3
     assert (tmp_path / "stores.csv").exists()
     assert (tmp_path / "products.csv").exists()
+
+
+def test_cli_writes_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    from freshcast.data import synthetic
+
+    out = tmp_path / "out"
+    argv = ["x", "--days", "2", "--out", str(out)]
+    monkeypatch.setattr(sys, "argv", argv)
+    synthetic.main()
+    assert (out / "sales.csv").exists()
