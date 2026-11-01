@@ -117,3 +117,4 @@ label.check { flex-direction: row; align-items: center; gap: 8px; min-height: 44
 .row { margin: 8px 0; }
 .toolbar input[type="text"] { min-height: 44px; padding: 6px 8px; font: inherit; color: var(--text);
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-width: 260px; }
+.banner-box { margin: 0; padding: 10px 14px; border: 2px solid var(--warn); border-radius: 8px; font-size: 0.95rem; }

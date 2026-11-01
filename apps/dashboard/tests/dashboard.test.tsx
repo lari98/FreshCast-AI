@@ -7,14 +7,19 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Dashboard } from "@/components/Dashboard";
 import { csvCell } from "@/components/OrdersTab";
 import { STRINGS } from "@/lib/i18n";
+import type { Replay } from "@/lib/replay";
 import type { DashboardData } from "@/lib/types";
 
 const data = JSON.parse(
   readFileSync(join(__dirname, "../public/demo/data.json"), "utf-8"),
 ) as DashboardData;
 
+const replay = JSON.parse(
+  readFileSync(join(__dirname, "../public/demo/replay.json"), "utf-8"),
+) as Replay;
+
 const setup = async () => {
-  const utils = render(<Dashboard load={async () => data} />);
+  const utils = render(<Dashboard load={async () => data} loadReplay={async () => replay} />);
   await screen.findByRole("tablist");
   return utils;
 };
@@ -110,6 +115,21 @@ describe("Tabs", () => {
     expect(after).toBeGreaterThanOrEqual(before);
   });
 
+  it("savings: shows the policies, the paired-week check and the synthetic-data notice", async () => {
+    await setup();
+    await openTab(/Einsparungen/);
+    expect(screen.getByText(/Synthetische Daten und angenommene Kosten/)).toBeInTheDocument();
+    expect(screen.getAllByText("Newsvendor (kostenoptimal)", { selector: "th" }).length).toBeGreaterThan(0);
+    const { wins, weeks } = replay.newsvendor_beats_rule_v1_weeks;
+    expect(screen.getByText(new RegExp(`${wins} von ${weeks}`))).toBeInTheDocument();
+  });
+
+  it("savings: reports an error when the replay file is missing", async () => {
+    window.history.replaceState(null, "", "#savings");
+    render(<Dashboard load={async () => data} loadReplay={async () => Promise.reject(new Error("x"))} />);
+    expect(await screen.findByText(/Replay-Daten konnten nicht geladen/)).toBeInTheDocument();
+  });
+
   it("model: states the numbers are synthetic", async () => {
     await setup();
     await openTab(/Modell/);
@@ -127,7 +147,7 @@ describe("csvCell", () => {
 });
 
 describe("accessibility", () => {
-  it.each([/Übersicht/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Daten/, /Modell/])(
+  it.each([/Übersicht/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Einsparungen/, /Daten/, /Modell/])(
     "has no detectable violations on tab %s",
     async (name) => {
       const { container } = await setup();

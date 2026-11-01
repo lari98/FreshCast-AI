@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased (phase 13)
+- Newsvendor (critical-ratio) order target with a per-SKU overage factor estimated on data before the evaluation window.
+- Policy replay: naive, v1 rule, newsvendor and planner played day by day over 3 months with FEFO, walk-forward models and a stock-conservation test. Report in `docs/ml/policy-replay.md`, ADR 0004.
+- Dashboard: Savings tab (policy comparison, waste per week, product groups) fed by `replay.json`. Synthetic data, assumed costs, not evidence of real savings.
+
 ## Unreleased (advanced dashboard)
 - Seven-tab dashboard: Overview (KPIs per currency, attention list, waste ranking), Orders (search, sort, multi-select approval, CSV export of approved lines with a formula-injection guard), Forecast (chart, proposal, out-of-sample accuracy), Expiry radar (rule-based hints, labelled as not an AI decision), What-if (demand and safety-stock sliders), Data (upload and quality), Model (backtest and scale facts, labelled synthetic).
 - Store scope for all tabs, tab in the URL hash, ARIA tabs with keyboard support, axe test per tab.

@@ -5,6 +5,9 @@ import { loadData } from "@/lib/source";
 import { STRINGS } from "@/lib/i18n";
 import { itemKey, itemMetrics } from "@/lib/kpi";
 import type { DashboardData, Lang } from "@/lib/types";
+import { loadReplay as defaultLoadReplay } from "@/lib/replay";
+import type { Replay } from "@/lib/replay";
+import { SavingsTab } from "./SavingsTab";
 import { AlertsTab } from "./AlertsTab";
 import { AssistantTab } from "./AssistantTab";
 import { CategoriesTab } from "./CategoriesTab";
@@ -21,9 +24,11 @@ import { Tabs } from "./Tabs";
 interface Props {
   /** Injected in tests; defaults to the demo/API loader. */
   load?: () => Promise<DashboardData>;
+  /** Policy replay (Savings tab); defaults to the bundled demo file. */
+  loadReplay?: () => Promise<Replay>;
 }
 
-const TAB_IDS = ["overview", "orders", "forecast", "plan", "alerts", "assistant", "expiry", "categories", "whatif", "data", "model"] as const;
+const TAB_IDS = ["overview", "orders", "forecast", "plan", "alerts", "assistant", "expiry", "categories", "whatif", "savings", "data", "model"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 function tabFromHash(): TabId {
@@ -35,11 +40,13 @@ function tabFromHash(): TabId {
   }
 }
 
-export function Dashboard({ load = () => loadData() }: Props) {
+export function Dashboard({ load = () => loadData(), loadReplay = () => defaultLoadReplay() }: Props) {
   const [lang, setLang] = useState<Lang>("de");
   const [data, setData] = useState<DashboardData | null>(null);
   const [demo, setDemo] = useState<DashboardData | null>(null);
   const [failed, setFailed] = useState(false);
+  const [replay, setReplay] = useState<Replay | null>(null);
+  const [replayFailed, setReplayFailed] = useState(false);
   const [store, setStore] = useState<string>(""); // "" = all stores
   const [selected, setSelected] = useState<string>("");
   const [approved, setApproved] = useState<ReadonlySet<string>>(new Set());
@@ -62,6 +69,17 @@ export function Dashboard({ load = () => loadData() }: Props) {
         show(d);
       })
       .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadReplay()
+      .then((r) => !cancelled && setReplay(r))
+      .catch(() => !cancelled && setReplayFailed(true));
     return () => {
       cancelled = true;
     };
@@ -114,6 +132,7 @@ export function Dashboard({ load = () => loadData() }: Props) {
     { id: "expiry", label: t.tabExpiry },
     { id: "categories", label: t.tabCategories },
     { id: "whatif", label: t.tabScenarios },
+    { id: "savings", label: t.tabSavings },
     { id: "data", label: t.tabData },
     { id: "model", label: t.tabModel },
   ];
@@ -199,6 +218,9 @@ export function Dashboard({ load = () => loadData() }: Props) {
             )}
             {tab === "whatif" && item && (
               <ScenariosTab key={key} item={item} scope={scope} lang={lang} t={t} />
+            )}
+            {tab === "savings" && (
+              <SavingsTab replay={replay} failed={replayFailed} lang={lang} t={t} />
             )}
             {tab === "data" && (
               <DataTab

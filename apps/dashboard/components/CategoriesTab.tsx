@@ -32,7 +32,7 @@ export function CategoriesTab({ metrics, lang, t }: Props) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.category}>
-                <th scope="row">{r.category}</th>
+                <th scope="row">{t.categoryNames[r.category] ?? r.category}</th>
                 <td>{formatNumber(r.items, lang)}</td>
                 <td>{formatNumber(r.forecastUnits, lang)}</td>
                 <td>{formatMoney(r.revenue, lang)}</td>

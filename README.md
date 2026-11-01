@@ -23,6 +23,9 @@ ruff format . && ruff check . && mypy && pytest
 ## Forecasting
 Backtest: `python -m freshcast.models.backtest` (results in `docs/ml/`).
 
+## Policy replay
+`python -m freshcast.replenishment.replay` replays four ordering policies over three months and writes `docs/ml/policy-replay.md` plus the data for the dashboard's Savings tab.
+
 ## API
 See `docs/architecture/api.md`.
 
@@ -31,11 +34,12 @@ See `docs/architecture/api.md`.
 5 Replenishment v2 (done) - 6 Incremental events (done) - 7 AWS & MLOps (code done, not deployed) -
 8 Bedrock assistant (done) - 9 Dashboard (done) - 10 Security & release (done, v0.1.0) -
 11 Calibrated intervals + scale benchmark (done) - 12 Bring-your-own-data (done) -
-13 Profit-optimal ordering + policy replay (next).
+13 Profit-optimal ordering + policy replay (done).
 
 
 ## More
 - [Architecture diagram](docs/architecture/diagram.md)
 - [Security review](docs/security/review-v0.1.0.md)
 - [Benchmark](docs/ml/benchmark.md) and [scale benchmark](docs/ml/scale-benchmark.md)
+- [Policy replay](docs/ml/policy-replay.md) and [ADR 0004](docs/adr/0004-profit-optimal-ordering.md)
 - [Changelog](CHANGELOG.md)

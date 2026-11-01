@@ -67,3 +67,15 @@ describe("what-if rule", () => {
     expect(ruleOrder({ ...p, usable_stock_units: 500 })).toBe(0);
   });
 });
+
+import { change, validateReplay } from "@/lib/replay";
+
+describe("replay helpers", () => {
+  it("computes relative change and guards a zero base", () => {
+    expect(change(63, 100)).toBeCloseTo(-0.37);
+    expect(change(5, 0)).toBeNull();
+  });
+  it("rejects a payload with the wrong shape", () => {
+    expect(() => validateReplay({})).toThrow();
+  });
+});
