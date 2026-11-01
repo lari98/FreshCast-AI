@@ -15,3 +15,5 @@ class Settings(BaseSettings):
     # Bedrock model or EU inference-profile id; unset = deterministic text only.
     bedrock_model_id: str | None = None
     bedrock_region: str = "eu-central-1"
+    # Allowed browser origins (JSON list in the environment). Empty = none.
+    cors_origins: list[str] = []

@@ -7,6 +7,8 @@ import type { DashboardData, Lang } from "@/lib/types";
 import { ExpiryTable } from "./ExpiryTable";
 import { ForecastChart } from "./ForecastChart";
 import { ProposalCard } from "./ProposalCard";
+import { QualityPanel } from "./QualityPanel";
+import { UploadPanel } from "./UploadPanel";
 
 interface Props {
   /** Injected in tests; defaults to the demo/API loader. */
@@ -16,19 +18,25 @@ interface Props {
 export function Dashboard({ load = () => loadData() }: Props) {
   const [lang, setLang] = useState<Lang>("de");
   const [data, setData] = useState<DashboardData | null>(null);
+  const [demo, setDemo] = useState<DashboardData | null>(null);
   const [failed, setFailed] = useState(false);
   const [store, setStore] = useState<string>("");
   const [sku, setSku] = useState<string>("");
   const t = STRINGS[lang];
+
+  function show(d: DashboardData) {
+    setData(d);
+    setStore(d.items[0]?.store_id ?? "");
+    setSku(d.items[0]?.sku ?? "");
+  }
 
   useEffect(() => {
     let cancelled = false;
     load()
       .then((d) => {
         if (cancelled) return;
-        setData(d);
-        setStore(d.items[0]?.store_id ?? "");
-        setSku(d.items[0]?.sku ?? "");
+        setDemo(d);
+        show(d);
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {
@@ -60,10 +68,19 @@ export function Dashboard({ load = () => loadData() }: Props) {
           </select>
         </label>
       </header>
-      <p className="banner" role="note">{t.demoBanner}</p>
+      <p className="banner" role="note">
+        {data?.source === "upload" ? t.uploadBanner : t.demoBanner}
+      </p>
       <main id="main" tabIndex={-1}>
         {failed && <p role="alert">{t.error}</p>}
         {!data && !failed && <p role="status">{t.loading}</p>}
+        <UploadPanel
+          t={t}
+          onData={show}
+          onReset={() => demo && show(demo)}
+          showReset={data?.source === "upload"}
+        />
+        {data?.quality && <QualityPanel quality={data.quality} lang={lang} t={t} />}
         {data && item && (
           <>
             <div className="filters">
@@ -77,7 +94,7 @@ export function Dashboard({ load = () => loadData() }: Props) {
                   }}
                 >
                   {stores.map(([id, city]) => (
-                    <option key={id} value={id}>{`${city} (${id})`}</option>
+                    <option key={id} value={id}>{city === id ? id : `${city} (${id})`}</option>
                   ))}
                 </select>
               </label>

@@ -27,3 +27,50 @@ export function validate(payload: unknown): DashboardData {
   }
   return data as DashboardData;
 }
+
+/** The API rejected the upload; ``problems`` says what to fix. */
+export class UploadError extends Error {
+  constructor(public readonly problems: string[]) {
+    super(problems.join("; "));
+  }
+}
+
+const DEV_HEADERS = { "x-dev-user": "dashboard", "x-dev-role": "store_manager" };
+
+/**
+ * Send the user's CSV files to the local API and return the forecast payload.
+ * The dev headers only work when the API runs with FRESHCAST_ENV=local; a
+ * deployed API requires real sign-in instead (planned).
+ */
+export async function analyzeUpload(
+  sales: File,
+  stock: File | null,
+  fetchImpl: typeof fetch = fetch,
+  apiUrl: string = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
+): Promise<DashboardData> {
+  const form = new FormData();
+  form.append("sales", sales);
+  if (stock) form.append("stock", stock);
+  let response: Response;
+  try {
+    response = await fetchImpl(`${apiUrl.replace(/\/$/, "")}/v1/analyze`, {
+      method: "POST",
+      headers: DEV_HEADERS,
+      body: form,
+    });
+  } catch {
+    throw new UploadError(["API_UNREACHABLE"]);
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      detail?: { problems?: string[] } | string;
+    } | null;
+    const detail = body?.detail;
+    throw new UploadError(
+      typeof detail === "object" && detail?.problems
+        ? detail.problems
+        : [`HTTP ${response.status}`],
+    );
+  }
+  return validate(await response.json());
+}

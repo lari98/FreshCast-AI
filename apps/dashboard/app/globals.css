@@ -66,3 +66,9 @@ thead th { font-size: 0.85rem; color: var(--muted); }
 .facts dd { margin: 0; font-variant-numeric: tabular-nums; }
 .status { min-height: 1.5em; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.upload-form { display: grid; gap: 12px; margin: 12px 0; max-width: 520px; }
+.upload-form input[type="file"] { font: inherit; min-height: 44px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.problems { border: 2px solid var(--crit); border-radius: 6px; padding: 8px 12px; }
+main > .card { margin-bottom: 16px; }

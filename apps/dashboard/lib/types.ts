@@ -51,7 +51,20 @@ export interface Item {
   explanation: Localised;
 }
 
+export interface Quality {
+  rows_in: number;
+  rows_used: number;
+  series_used: number;
+  skipped: string[];
+  warnings: string[];
+  date_from: string;
+  date_to: string;
+  calibrated: boolean;
+}
+
 export interface DashboardData {
+  source?: "upload";
+  quality?: Quality;
   disclaimer: string;
   as_of: string;
   horizon_days: number;

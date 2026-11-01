@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Engine
 
 from freshcast.assistant.client import BedrockConverseModel, TextModel
 from freshcast_api.config import Settings
 from freshcast_api.db import make_engine, make_session_factory
-from freshcast_api.routers import inventory, proposals
+from freshcast_api.routers import analyze, inventory, proposals
 
 
 def create_app(
@@ -28,6 +29,21 @@ def create_app(
     app.state.session_factory = make_session_factory(
         engine or make_engine(settings.database_url)
     )
+    # Browser access for the local dashboard only; deployed environments set
+    # FRESHCAST_CORS_ORIGINS explicitly instead of relying on a default.
+    origins = settings.cors_origins or (
+        ["http://localhost:3000", "http://127.0.0.1:3000"]
+        if settings.env == "local"
+        else []
+    )
+    if origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_methods=["GET", "POST"],
+            allow_headers=["x-dev-user", "x-dev-role", "content-type"],
+        )
+    app.include_router(analyze.router)
     app.include_router(inventory.router)
     app.include_router(proposals.router)
 

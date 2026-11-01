@@ -28,5 +28,11 @@ language switch changes visible text only).
 DE/EN toggle; `Intl` number and date formatting. Currency formatting helper
 exists (EUR/CHF) but prices are not yet shown.
 
+## Upload mode (phase 12)
+"Eigene Daten analysieren" posts your CSV files to the local API (default
+`http://localhost:8000`, override with `NEXT_PUBLIC_API_URL`) and shows the
+result with a data-quality panel. See `byod.md`. The hosted preview page cannot
+reach your local API; run the dashboard locally for this feature.
+
 ## Known gaps
 No auth in the dashboard; approve is local state only; no real API calls yet.

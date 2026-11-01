@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (phase 12)
+- Upload your own sales/stock CSV (German Excel formats supported) and get forecasts, proposals and a data-quality report: `POST /v1/analyze`, dashboard upload panel, sample files.
+- `scripts/run-api.ps1` starts the API locally on Windows.
+
 ## Unreleased (phase 11)
 - Conformalised quantile regression (per-SKU) for calibrated 80 % intervals: coverage 72.1 % to 80.9 % in the synthetic backtest.
 - Vectorised rolling features (no per-series Python call); verified identical to the pandas reference.
