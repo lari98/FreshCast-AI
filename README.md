@@ -37,6 +37,15 @@ See `docs/architecture/api.md`.
 13 Profit-optimal ordering + policy replay (done).
 
 
+## Version
+
+**Current: v0.2.0** (2026-11-02). Versions follow [Semantic Versioning](https://semver.org); every release has a git tag, an entry in [CHANGELOG.md](CHANGELOG.md) and a page in [docs/releases](docs/releases). The number lives in `VERSION` and in each package manifest.
+
+| Version | Date | What changed | Effect for users |
+|---|---|---|---|
+| v0.2.0 | 2026-11-02 | Retail chains and market map, upload guard and API hardening, live update, Today tab, quick search, audit trail, paging, fast run mode, new palette, test report | Faster, safer, shows more per market; dashboard updates itself without restart |
+| v0.1.0 | first release | Forecasting, replenishment, dashboard, BYOD, AWS CDK | Initial portfolio release |
+
 ## More
 - [Architecture diagram](docs/architecture/diagram.md)
 - [Security review](docs/security/review-v0.1.0.md)
