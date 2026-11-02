@@ -68,3 +68,10 @@ Prompt-injection attempts are part of the attack tests.
 Cognito + MFA, a CloudFront response-headers policy and AWS WAF, ClamAV or a managed S3 malware scan
 in the upload path, nonce-based CSP behind a small server, an independent penetration test, and
 secret scanning in CI.
+
+## Added in v0.3.0
+
+- Static server: CSP header with `frame-ancestors 'none'`, Permissions-Policy, COOP/CORP, request and header time limits against slow connections, URL length limit.
+- API: at most two analyses at once (503 with Retry-After beyond that), so an upload flood cannot exhaust the processor; readiness probe.
+- Damaged or hostile saved settings in the browser are ignored; one failing tab cannot take the dashboard down.
+- Still true: no third-party penetration test, and no system is "unhackable".

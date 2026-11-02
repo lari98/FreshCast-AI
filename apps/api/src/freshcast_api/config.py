@@ -25,3 +25,8 @@ class Settings(BaseSettings):
     # API Gateway throttle is still needed in front of a deployed API.
     rate_limit_per_minute: int = 600
     analyze_rate_limit_per_minute: int = 20
+    # Upload analysis is the heavy job: at most this many run at once (others get
+    # 503 and Retry-After); identical uploads come from a small in-memory cache.
+    analyze_max_concurrent: int = 2
+    analyze_cache_entries: int = 8
+    analyze_cache_ttl_seconds: int = 900

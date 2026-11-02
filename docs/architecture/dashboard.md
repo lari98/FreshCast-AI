@@ -73,3 +73,7 @@ countries, so the chain is a second dimension next to the market, not part of it
 - **Paging**: long tables use `PagedRows`.
 - **Fast mode**: `scripts/run-dashboard.ps1` serves the production export with `scripts/static-server.mjs`; `-Dev` for hot reload.
 - **Palette**: see `docs/quality/design-tokens.md`. Test results: `docs/quality/test-report.md`.
+
+## Efficiency (v0.3.0)
+
+Energy-saving mode (setting), update check only in visible tabs, per-tab error boundary, 304/Brotli static server. See `docs/quality/efficiency.md`.

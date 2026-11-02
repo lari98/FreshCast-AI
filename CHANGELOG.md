@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.0 – 2026-11-02 – efficiency and resilience
+
+Details: [docs/releases/v0.3.0.md](docs/releases/v0.3.0.md), measurements: [docs/quality/efficiency.md](docs/quality/efficiency.md).
+
+- Network: Brotli/gzip copies prepared once, ETag and 304, update check every 5 min (none while hidden or offline, back-off after errors), gzip API answers. Unchanged reload: about 23 KB to 0 B; first load 234,548 B to 217,405 B.
+- Processor and heat: upload analysis 1 thread by default (CPU 2.98 s to 1.45 s, same speed), result cache for identical uploads, at most 2 analyses at once, run script at below-normal priority with 10 s watch interval.
+- New: energy-saving mode (setting; on by default with browser data saver).
+- Reliability: per-tab error boundary, damaged saved settings ignored, `/health/ready`, `/healthz`, time limits.
+- Security: CSP header with frame-ancestors, Permissions-Policy, COOP/CORP on the static server; load gate against upload floods.
+- Tests: core 170, API 55, dashboard 145, static server 5; coverage 96.38 % / 96.52 %.
+
 ## v0.2.0 – 2026-11-02 – quality, speed, safety and chains
 
 Versioning: [Semantic Versioning](https://semver.org). Minor = new features, patch = fixes only. Details: [docs/releases/v0.2.0.md](docs/releases/v0.2.0.md).

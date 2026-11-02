@@ -26,6 +26,7 @@ from freshcast.byod.analyze import analyze
 from freshcast.byod.ingest import MAX_BYTES, IngestError
 from freshcast.security.upload_guard import UploadRejected, guard_upload
 from freshcast_api.config import Settings
+from freshcast_api.efficiency import Busy, cache_key
 from freshcast_api.security import Principal, Role, require_role
 
 router = APIRouter(prefix="/v1", tags=["analyze"])
@@ -62,9 +63,24 @@ def analyze_upload(
     """Validate the upload, train on it and return the dashboard payload."""
     try:
         settings: Settings = request.app.state.settings
-        return analyze(
-            _read(sales, settings), _read(stock, settings) if stock else None, as_of
-        )
+        sales_data = _read(sales, settings)
+        stock_data = _read(stock, settings) if stock else None
+        key = cache_key(sales_data, stock_data, as_of or date.today())
+        cache = request.app.state.analyze_cache
+        cached: dict[str, Any] | None = cache.get(key)
+        if cached is not None:
+            return cached  # same upload again: no training, no processor load
+        try:
+            with request.app.state.analyze_gate.slot():
+                result = analyze(sales_data, stock_data, as_of)
+        except Busy as exc:
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "analysis capacity is in use, try again in a few seconds",
+                headers={"Retry-After": "5"},
+            ) from exc
+        cache.put(key, result)
+        return result
     except IngestError as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, {"problems": exc.problems}

@@ -36,6 +36,31 @@ test("serves the index, compresses, caches static assets and sets headers", asyn
   assert.match(js.headers.get("cache-control"), /immutable/);
 });
 
+test("Brotli is preferred, ETag gives a 304, and security headers are set", async () => {
+  const br = await fetch(`${base()}/_next/static/a.js`, { headers: { "accept-encoding": "br, gzip" } });
+  assert.equal(br.headers.get("content-encoding"), "br");
+  assert.equal(br.headers.get("vary"), "Accept-Encoding");
+  assert.match(br.headers.get("content-security-policy"), /frame-ancestors 'none'/);
+  assert.match(br.headers.get("permissions-policy"), /camera=\(\)/);
+  assert.equal(br.headers.get("cross-origin-opener-policy"), "same-origin");
+  assert.ok(Number(br.headers.get("content-length")) < 2000); // 2000 repeated bytes shrink a lot
+  const etag = br.headers.get("etag");
+  assert.ok(etag);
+  const again = await fetch(`${base()}/`, { headers: { "if-none-match": (await fetch(`${base()}/`)).headers.get("etag") } });
+  assert.equal(again.status, 304);
+  assert.equal((await again.text()).length, 0);
+  const plain = await fetch(`${base()}/_next/static/a.js`, { headers: { "accept-encoding": "identity" } });
+  assert.equal(plain.headers.get("content-encoding"), null);
+  assert.equal((await plain.text()).length, 2000);
+});
+
+test("health check, overlong URLs and slow-client limits", async () => {
+  assert.equal((await fetch(`${base()}/healthz`)).status, 200);
+  assert.equal((await fetch(`${base()}/${"a".repeat(3000)}`)).status, 414);
+  assert.equal(server.requestTimeout, 15_000);
+  assert.equal(server.headersTimeout, 10_000);
+});
+
 test("only GET and HEAD are allowed", async () => {
   assert.equal((await fetch(`${base()}/`, { method: "POST" })).status, 405);
 });

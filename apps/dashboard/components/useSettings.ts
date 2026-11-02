@@ -30,12 +30,17 @@ export function useSettings(isUpload: boolean) {
   const [currencySel, setCurrencySel] = useState<string[] | null>(null);
   const [chainSel, setChainSel] = useState<string[] | null>(null);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [eco, setEco] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => {
       try {
         const raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null");
+        // First visit on a metered / "data saver" connection: start in energy-saving mode.
+        const saver = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+        if (!raw && saver) setEco(true);
         if (raw && typeof raw === "object") {
+          setEco(typeof raw.eco === "boolean" ? raw.eco : saver);
           if (typeof raw.costShare === "number" && raw.costShare >= 0.4 && raw.costShare <= 0.8) setCostShare(raw.costShare);
           if (["auto", "light", "dark"].includes(raw.theme)) setTheme(raw.theme);
           if (raw.role === "reviewer" || raw.role === "planner") setRole(raw.role);
@@ -58,7 +63,7 @@ export function useSettings(isUpload: boolean) {
       window.localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          costShare, theme, role, markets: marketSel, currencies: currencySel, chains: chainSel,
+          costShare, theme, role, eco, markets: marketSel, currencies: currencySel, chains: chainSel,
           workflow: isUpload ? {} : workflow,
           audit: isUpload ? [] : audit,
         }),
@@ -66,7 +71,7 @@ export function useSettings(isUpload: boolean) {
     } catch {
       /* Not persisted; the page still works. */
     }
-  }, [restored, costShare, theme, role, marketSel, currencySel, chainSel, workflow, audit, isUpload]);
+  }, [restored, costShare, theme, role, eco, marketSel, currencySel, chainSel, workflow, audit, isUpload]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -76,6 +81,6 @@ export function useSettings(isUpload: boolean) {
 
   return {
     workflow, setWorkflow, role, setRole, costShare, setCostShare, theme, setTheme,
-    marketSel, setMarketSel, currencySel, setCurrencySel, chainSel, setChainSel, audit, setAudit,
+    eco, setEco, marketSel, setMarketSel, currencySel, setCurrencySel, chainSel, setChainSel, audit, setAudit,
   };
 }

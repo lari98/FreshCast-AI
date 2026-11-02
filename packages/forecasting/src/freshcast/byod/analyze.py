@@ -14,6 +14,7 @@ the output; the model never decides on its own, a person approves.
 from __future__ import annotations
 
 import dataclasses
+import os
 from datetime import date, timedelta
 from typing import Any
 
@@ -47,6 +48,20 @@ CALIBRATION_MIN_SPAN = 120  # days of history needed to hold out 28 for calibrat
 DEFAULT_SHELF_LIFE = 5
 COST_SHARE, MARGIN_SHARE = 0.6, 0.4
 LANGS = ("de", "en")
+
+
+def worker_threads() -> int:
+    """Threads for model training: one by default, to keep processor load and heat low.
+
+    Measured on the sample upload (2 cores): 1 thread 1.56 s wall / 1.45 s CPU,
+    2 threads 1.61 s / 2.98 s, 4 threads 1.92 s / 3.54 s. The files are small, so
+    extra threads only burn more power. ``FRESHCAST_THREADS`` raises it (clamped to
+    the number of cores) for large uploads on a server.
+    """
+    raw = os.environ.get("FRESHCAST_THREADS", "")
+    if raw.strip().isdigit():
+        return max(1, min(int(raw), os.cpu_count() or 1))
+    return 1
 
 
 def _future_rows(panel: pd.DataFrame, as_of: date) -> pd.DataFrame:
@@ -138,10 +153,13 @@ def analyze(
     known = feats[feats["business_date"] < pd.Timestamp(as_of_date)]
     cut = pd.Timestamp(as_of_date - timedelta(days=HISTORY_DAYS + HORIZON))
     try:
-        hist_model = DemandForecaster(calibration_days=cal_days, n_jobs=2).fit(
+        threads = worker_threads()
+        hist_model = DemandForecaster(calibration_days=cal_days, n_jobs=threads).fit(
             known[known["business_date"] < cut]
         )
-        now_model = DemandForecaster(calibration_days=cal_days, n_jobs=2).fit(known)
+        now_model = DemandForecaster(calibration_days=cal_days, n_jobs=threads).fit(
+            known
+        )
     except ValueError as exc:
         raise IngestError([f"history too short to train a model: {exc}"]) from exc
 

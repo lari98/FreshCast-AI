@@ -116,3 +116,19 @@ def test_chain_column_is_read_with_german_alias(one_store: pd.DataFrame) -> None
 def test_chain_is_optional(one_store: pd.DataFrame) -> None:
     payload = analyze(_csv(one_store))
     assert {i["chain"] for i in payload["items"]} == {""}
+
+
+def test_worker_threads_is_capped_and_configurable(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import os
+
+    from freshcast.byod.analyze import worker_threads
+
+    cores = os.cpu_count() or 1
+    monkeypatch.delenv("FRESHCAST_THREADS", raising=False)
+    assert worker_threads() == 1  # default: lowest processor load
+    monkeypatch.setenv("FRESHCAST_THREADS", "1")
+    assert worker_threads() == 1
+    monkeypatch.setenv("FRESHCAST_THREADS", "9999")
+    assert worker_threads() == cores  # never more than the machine has
+    monkeypatch.setenv("FRESHCAST_THREADS", "abc")
+    assert worker_threads() >= 1

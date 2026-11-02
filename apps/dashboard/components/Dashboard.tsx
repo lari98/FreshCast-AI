@@ -19,6 +19,8 @@ import { QuickSearch } from "./QuickSearch";
 import type { SearchEntry } from "./QuickSearch";
 import { TodayTab } from "./TodayTab";
 import { UpdateWatcher } from "./UpdateWatcher";
+import { EcoContext } from "./EcoContext";
+import { TabBoundary } from "./TabBoundary";
 import { COST_SHARE } from "@/lib/kpi";
 import type { ItemMetrics } from "@/lib/kpi";
 import { append, diffWorkflow } from "@/lib/audit";
@@ -59,7 +61,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   const t = STRINGS[lang];
   const {
     workflow, setWorkflow, role, setRole, costShare, setCostShare, theme, setTheme,
-    marketSel, setMarketSel, currencySel, setCurrencySel, chainSel, setChainSel, audit, setAudit,
+    eco, setEco, marketSel, setMarketSel, currencySel, setCurrencySel, chainSel, setChainSel, audit, setAudit,
   } = useSettings(data?.source === "upload");
 
   const show = useCallback((d: DashboardData) => {
@@ -211,9 +213,9 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   ];
 
   return (
-    <>
+    <EcoContext.Provider value={eco}>
       <a className="skip" href="#main">{t.skip}</a>
-      <UpdateWatcher t={t} busy={data?.source === "upload"} />
+      <UpdateWatcher t={t} busy={data?.source === "upload"} intervalMs={eco ? 15 * 60_000 : undefined} />
       <header className="top">
         <h1>{t.title}</h1>
         <div className="filters">
@@ -284,6 +286,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
         {nothingSelected && <p role="alert">{t.marketsNone}</p>}
         {data && (
           <Tabs groups={groups} active={tab} onChange={changeTab} label={t.tabsLabel}>
+            <TabBoundary t={t} resetKey={tab}>
             {tab === "today" && (
               <TodayTab
                 metrics={metrics} items={scope} workflow={workflow} role={role} asOf={data.as_of}
@@ -367,8 +370,8 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
                 onToggleChain={(c) => setChainSel(toggle([...selChains], chains, c))}
                 currencies={currencies} selectedCurrencies={selCurrencies}
                 onToggleCurrency={(c) => setCurrencySel(toggle([...selCurrencies], currencies, c))}
-                costShare={costShare} onCost={setCostShare} theme={theme} onTheme={setTheme}
-                onReset={() => { setCostShare(COST_SHARE); setTheme("auto"); setMarketSel(null); setCurrencySel(null); setChainSel(null); }} t={t}
+                costShare={costShare} onCost={setCostShare} theme={theme} onTheme={setTheme} eco={eco} onEco={setEco}
+                onReset={() => { setCostShare(COST_SHARE); setTheme("auto"); setMarketSel(null); setCurrencySel(null); setChainSel(null); setEco(false); }} t={t}
               />
             )}
             {tab === "help" && <HelpTab t={t} />}
@@ -389,6 +392,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
             )}
             {tab === "model" && <ModelTab lang={lang} t={t} />}
             {(tab === "forecast" || tab === "whatif") && scope.length === 0 && <p>{t.noItems}</p>}
+            </TabBoundary>
           </Tabs>
         )}
       </main>
@@ -407,6 +411,6 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
       {process.env.NEXT_PUBLIC_BUILD && (
         <footer className="build">{t.build}: {process.env.NEXT_PUBLIC_BUILD}</footer>
       )}
-    </>
+    </EcoContext.Provider>
   );
 }

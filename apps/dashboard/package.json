@@ -1,6 +1,6 @@
 {
   "name": "freshcast-dashboard",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "private": true,
   "description": "FreshCast AI planner dashboard (demo-data driven, optional API source).",
   "scripts": {

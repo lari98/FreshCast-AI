@@ -15,15 +15,22 @@
     1. stops an OLD server that still holds the port (the cause of "old version"),
     2. mirrors apps\dashboard to C:\dev\dashboard,
     3. installs packages when package-lock.json changed,
-    4. keeps mirroring every 2 seconds in the background. In fast mode a change
+    4. keeps mirroring every $WatchSeconds seconds (default 10) in the background. In fast mode a change
        triggers a rebuild, and the open browser tab then reloads itself (it checks
        version.json). You do not close anything. Exception: when package.json or
        package-lock.json change, stop (Ctrl+C) and start again.
 
-  Usage (repository root):  .\scripts\run-dashboard.ps1 [-Dev] [-Port 3000] [-NoWatch]
+  LOW POWER: the script and everything it starts (Node, the build) run at "below normal"
+  priority, so a build never makes the fan spin up at the expense of your other programs,
+  and the idle server uses no processor time. -NoWatch switches the background mirroring
+  off completely (then restart the script after you change code).
+
+  Usage (repository root):  .\scripts\run-dashboard.ps1 [-Dev] [-Port 3000] [-NoWatch] [-WatchSeconds 10]
 #>
-param([int]$Port = 3000, [switch]$Dev, [switch]$NoWatch)
+param([int]$Port = 3000, [switch]$Dev, [switch]$NoWatch, [int]$WatchSeconds = 10)
 $ErrorActionPreference = "Stop"
+$env:NEXT_TELEMETRY_DISABLED = "1"   # no background network traffic from the build tool
+try { (Get-Process -Id $PID).PriorityClass = "BelowNormal" } catch { }   # children inherit it
 $repo = Split-Path -Parent $PSScriptRoot
 $src = Join-Path $repo "apps\dashboard"
 $dst = "C:\dev\dashboard"
@@ -74,11 +81,11 @@ $job = $null
 try {
     if ($Dev) {
         if (-not $NoWatch) {
-            $job = Start-Job -ArgumentList $src, $dst -ScriptBlock {
-                param($s, $d)
+            $job = Start-Job -ArgumentList $src, $dst, $WatchSeconds -ScriptBlock {
+                param($s, $d, $w)
                 while ($true) {
                     robocopy $s $d /MIR /XD node_modules .next out /XF version.json /NFL /NDL /NJH /NJS /NP | Out-Null
-                    Start-Sleep -Seconds 2
+                    Start-Sleep -Seconds $w
                 }
             }
         }
@@ -89,8 +96,8 @@ try {
         npm run build
         if ($LASTEXITCODE -ne 0) { throw "build failed" }
         if (-not $NoWatch) {
-            $job = Start-Job -ArgumentList $src, $dst, $repo -ScriptBlock {
-                param($s, $d, $r)
+            $job = Start-Job -ArgumentList $src, $dst, $repo, $WatchSeconds -ScriptBlock {
+                param($s, $d, $r, $w)
                 while ($true) {
                     robocopy $s $d /MIR /XD node_modules .next out /XF version.json /NFL /NDL /NJH /NJS /NP | Out-Null
                     if ($LASTEXITCODE -ge 1 -and $LASTEXITCODE -lt 8) {
@@ -99,7 +106,7 @@ try {
                         $env:NEXT_PUBLIC_BUILD = "$h+$(Get-Date -Format HHmm)"
                         npm run build *> $null   # open tabs notice version.json and reload
                     }
-                    Start-Sleep -Seconds 2
+                    Start-Sleep -Seconds $w
                 }
             }
             Write-Host "Live update is ON: a change in the repository is rebuilt and the open tab reloads itself."

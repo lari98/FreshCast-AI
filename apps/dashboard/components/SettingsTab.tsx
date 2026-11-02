@@ -9,6 +9,8 @@ interface Props {
   theme: Theme;
   onTheme: (v: Theme) => void;
   onReset: () => void;
+  eco: boolean;
+  onEco: (v: boolean) => void;
   t: Strings;
   markets: string[]; // available in the data
   selectedMarkets: ReadonlySet<string>;
@@ -22,7 +24,7 @@ interface Props {
 }
 
 export function SettingsTab({
-  costShare, onCost, theme, onTheme, onReset, t,
+  costShare, onCost, theme, onTheme, onReset, eco, onEco, t,
   markets, selectedMarkets, onToggleMarket, chains, selectedChains, onToggleChain, currencies, selectedCurrencies, onToggleCurrency,
 }: Props) {
   return (
@@ -77,6 +79,11 @@ export function SettingsTab({
             <option value="dark">{t.themeDark}</option>
           </select>
         </label>
+        <label className="check">
+          <input type="checkbox" checked={eco} onChange={(e) => onEco(e.target.checked)} />
+          {t.ecoLabel}
+        </label>
+        <p className="hint">{t.ecoHint}</p>
         <button type="button" className="btn" onClick={onReset}>{t.resetSettings}</button>
         <p className="hint">{t.settingsSaved}</p>
       </div>

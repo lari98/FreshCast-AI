@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import type { Strings } from "@/lib/i18n";
+import { EcoContext } from "./EcoContext";
 
 interface Props<T> {
   rows: T[];
@@ -18,7 +19,10 @@ interface Props<T> {
  * thousands of DOM nodes on the page for every tab switch (measured: 400 ms for
  * 336 items). Exports and totals still use every row; only the display is paged.
  */
-export function PagedRows<T>({ rows, render, colSpan, t, size = 100 }: Props<T>) {
+export function PagedRows<T>({ rows, render, colSpan, t, size: sizeProp }: Props<T>) {
+  // Energy-saving mode shows fewer rows at a time, so less is drawn and less memory is used.
+  const eco = useContext(EcoContext);
+  const size = sizeProp ?? (eco ? 25 : 100);
   const [shown, setShown] = useState(size);
   const left = rows.length - shown;
   return (

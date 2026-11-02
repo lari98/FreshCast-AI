@@ -61,3 +61,17 @@ paged tables, rewritten palette (see `design-tokens.md`).
 - No deployed AWS environment was exercised.
 - Replay results use synthetic data and assumed cost shares (60 % / 40 %); they are not real savings.
 - Loss ratio can exceed 100 % in the map (waste value relative to revenue); the map hint explains this.
+
+## Re-run for v0.3.0 (2026-11-02)
+
+| Suite | Result |
+|---|---|
+| Core pytest | 170 passed, coverage 96.38 % |
+| API pytest | 55 passed, coverage 96.52 % |
+| Dashboard vitest | 145 passed (7 files) |
+| Static server (node:test) | 5 passed |
+| ruff, ruff format, mypy strict, Bandit | clean |
+| tsc, ESLint | clean |
+| `pip-audit`, `npm audit --omit=dev` | no known vulnerabilities, 0 vulnerabilities |
+
+Efficiency measurements: see `efficiency.md`.
