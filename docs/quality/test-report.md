@@ -86,3 +86,7 @@ Efficiency measurements: see `efficiency.md`.
 | Static server (node:test) | 5 passed |
 | Real Chromium | offline reload, update to a new build, reset: pass |
 | Linters, mypy, Bandit, tsc, ESLint, `pip-audit`, `npm audit` | clean |
+
+## CI note (v0.4.1)
+
+The first GitHub runs of `security.yml` failed in job `attack-tests` (test import path, see `docs/releases/v0.4.1.md`). Fixed and reproduced locally; other jobs of that run were not visible to me, so check the next run.

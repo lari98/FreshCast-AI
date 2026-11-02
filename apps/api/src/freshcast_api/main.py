@@ -22,7 +22,7 @@ def create_app(
 ) -> FastAPI:
     """Build the app; settings, engine and text model are injectable for tests."""
     settings = settings or Settings()
-    app = FastAPI(title="FreshCast AI API", version="0.4.0")
+    app = FastAPI(title="FreshCast AI API", version="0.4.1")
     app.state.settings = settings
     if text_model is None and settings.bedrock_model_id:
         text_model = BedrockConverseModel(

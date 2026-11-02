@@ -42,7 +42,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e "packages/forecasting[dev]" -e "apps/api[dev]"
-          pytest packages/forecasting/tests/security apps/api/tests/test_security_phase2_api.py --no-cov
+          # Each package has its own test root (the API tests import "tests.conftest"),
+          # so they run one after the other from their own folders.
+          (cd packages/forecasting && pytest tests/security --no-cov)
+          (cd apps/api && pytest tests/test_security_phase2_api.py --no-cov)
   dashboard-dependencies:
     runs-on: ubuntu-latest
     defaults:

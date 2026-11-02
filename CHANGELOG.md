@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.1 – 2026-11-02 – CI fix
+
+Details: [docs/releases/v0.4.1.md](docs/releases/v0.4.1.md).
+
+- Fixed the GitHub Security workflow job `attack-tests` (`ModuleNotFoundError: No module named 'tests'`): the two attack-test folders now run from their own package folders. No product change.
+
 ## v0.4.0 – 2026-11-02 – offline use and per-store forecast caching
 
 Details: [docs/releases/v0.4.0.md](docs/releases/v0.4.0.md), benchmark: [docs/ml/per-store-forecast.md](docs/ml/per-store-forecast.md).
