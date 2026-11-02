@@ -154,11 +154,28 @@ def analyze(
     ahead[["point", "lower", "upper"]] = now_model.predict(ahead)
     window = pd.concat([hist, ahead]).sort_values("business_date")
 
+    # Split once per series instead of filtering the big frames 300 times.
+    keys = ["store_id", "sku"]
+    rows_by = {k: g for k, g in window.groupby(keys, sort=False)}  # noqa: C416
+    meta_by = {
+        (r["store_id"], r["sku"]): r
+        for r in panel.groupby(keys, sort=False).tail(1).to_dict("records")
+    }
+    stock_by = (
+        {k: g for k, g in stock.groupby(keys, sort=False)}  # noqa: C416
+        if not stock.empty
+        else {}
+    )
     items = [
-        _item(store, sku, window, panel, stock, as_of_date)
-        for (store, sku) in sorted(
-            {(s, k) for s, k in zip(panel["store_id"], panel["sku"], strict=True)}
+        _item(
+            store,
+            sku,
+            rows_by[store, sku],
+            meta_by[store, sku],
+            stock_by.get((store, sku), stock.iloc[0:0]),
+            as_of_date,
         )
+        for (store, sku) in sorted(meta_by)
     ]
     return {
         "disclaimer": (
@@ -177,13 +194,11 @@ def analyze(
 def _item(
     store: str,
     sku: str,
-    window: pd.DataFrame,
-    panel: pd.DataFrame,
-    stock: pd.DataFrame,
+    rows: pd.DataFrame,
+    meta: dict[Any, Any],
+    mine: pd.DataFrame,
     as_of: date,
 ) -> dict[str, Any]:
-    rows = window[(window["store_id"] == store) & (window["sku"] == sku)]
-    meta = panel[(panel["store_id"] == store) & (panel["sku"] == sku)].iloc[-1]
     name = str(meta["product_name"]) if pd.notna(meta["product_name"]) else sku
     shelf = int(_num(meta["shelf_life_days"], DEFAULT_SHELF_LIFE))
     pack = max(1, int(_num(meta["pack_size"], 1)))
@@ -207,11 +222,6 @@ def _item(
     future = rows[rows["business_date"] >= pd.Timestamp(as_of)]
     scen = DemandScenarios.from_floats(
         future["lower"].tolist(), future["point"].tolist(), future["upper"].tolist()
-    )
-    mine = (
-        stock[(stock["store_id"] == store) & (stock["sku"] == sku)]
-        if not stock.empty
-        else stock
     )
     stock_rows: list[dict[Any, Any]] = mine.to_dict("records")
     lots = tuple(

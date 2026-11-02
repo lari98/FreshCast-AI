@@ -1,3 +1,4 @@
+import { PagedRows } from "./PagedRows";
 import { formatCurrency, formatDate, formatMoney, formatNumber } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
 import { COST_SHARE, zeroMoney } from "@/lib/kpi";
@@ -61,7 +62,7 @@ export function ExpiryTab({ items, lang, t, onOpen, costShare = COST_SHARE }: Pr
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ item, lot, value }) => (
+            <PagedRows rows={rows} colSpan={8} t={t} render={({ item, lot, value }) => (
               <tr key={`${item.store_id}|${item.sku}|${lot.lot_id}`}>
                 <th scope="row">
                   <button type="button" className="link" onClick={() => onOpen(`${item.store_id}|${item.sku}`)}>
@@ -79,7 +80,7 @@ export function ExpiryTab({ items, lang, t, onOpen, costShare = COST_SHARE }: Pr
                 </td>
                 <td>{hint(lot, t)}</td>
               </tr>
-            ))}
+            )} />
           </tbody>
         </table>
       </div>

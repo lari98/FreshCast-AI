@@ -60,6 +60,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Phase 3 to 5 attack tests (script injection, hostile files, prompt injection, updater)
         run: npx vitest run tests/security.test.tsx
+      - name: Static server tests (path traversal, headers)
+        run: npm run test:scripts
   codeql:
     runs-on: ubuntu-latest
     permissions:

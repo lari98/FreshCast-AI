@@ -1,5 +1,8 @@
 "use client";
 
+import { AuditPanel } from "./AuditPanel";
+import type { AuditEvent } from "@/lib/audit";
+import { PagedRows } from "./PagedRows";
 import { useState } from "react";
 import { formatCurrency, formatMoney, formatNumber } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
@@ -19,6 +22,7 @@ interface Props {
   onSubmit: (keys: string[]) => void;
   onDecide: (keys: string[], approve: boolean) => void;
   onOpen: (key: string) => void;
+  audit: AuditEvent[];
   lang: Lang;
   t: Strings;
 }
@@ -72,6 +76,7 @@ export function ApprovalTab(p: Props) {
   const reviewer = role === "reviewer";
 
   return (
+    <>
     <section aria-labelledby="appr-h" className="card">
       <h2 id="appr-h">{t.approvalTitle}</h2>
       <p className="hint">{t.approvalHint}</p>
@@ -109,7 +114,7 @@ export function ApprovalTab(p: Props) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((m) => {
+            <PagedRows rows={rows} colSpan={10} t={t} render={(m) => {
               const e = entry(m);
               const locked = reviewer || e.status === "submitted" || e.status === "approved";
               const delta = (e.qty - e.proposed) * unitCost(m);
@@ -148,11 +153,13 @@ export function ApprovalTab(p: Props) {
                   </td>
                 </tr>
               );
-            })}
+            }} />
           </tbody>
         </table>
       </div>
       <p className="hint">{t.fvaNote}</p>
     </section>
+    <AuditPanel events={p.audit} metrics={metrics} lang={lang} t={t} />
+    </>
   );
 }

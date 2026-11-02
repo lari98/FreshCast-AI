@@ -1,3 +1,4 @@
+import { PagedRows } from "./PagedRows";
 import { formatNumber, formatPercent } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
 import { buildAlerts } from "@/lib/alerts";
@@ -42,7 +43,7 @@ export function AlertsTab({ items, lang, t, onOpen }: Props) {
               </tr>
             </thead>
             <tbody>
-              {alerts.map((a) => (
+              <PagedRows rows={alerts} colSpan={5} t={t} render={(a) => (
                 <tr key={a.id}>
                   <td className={a.severity === "high" ? "risk risk-high" : "risk risk-medium"}>
                     <span aria-hidden="true">{sev[a.severity]} </span>
@@ -55,7 +56,7 @@ export function AlertsTab({ items, lang, t, onOpen }: Props) {
                   <td>{text[a.kind]}</td>
                   <td>{value(a)}</td>
                 </tr>
-              ))}
+              )} />
             </tbody>
           </table>
         </div>

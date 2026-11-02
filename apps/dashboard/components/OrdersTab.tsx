@@ -1,5 +1,6 @@
 "use client";
 
+import { PagedRows } from "./PagedRows";
 import { useMemo, useState } from "react";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
@@ -164,7 +165,7 @@ export function OrdersTab({ metrics, workflow, costShare, onSubmit, onOpen, lang
             </tr>
           </thead>
           <tbody>
-            {rows.map((m) => (
+            <PagedRows rows={rows} colSpan={9} t={t} render={(m) => (
               <tr key={m.key}>
                 <td>
                   <input
@@ -187,7 +188,7 @@ export function OrdersTab({ metrics, workflow, costShare, onSubmit, onOpen, lang
                 <td className={`risk risk-${m.worstRisk}`}>{t.risks[m.worstRisk]}</td>
                 <td>{statusText(m.key)}</td>
               </tr>
-            ))}
+            )} />
           </tbody>
         </table>
       </div>

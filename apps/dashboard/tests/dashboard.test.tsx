@@ -18,12 +18,19 @@ const replay = JSON.parse(
   readFileSync(join(__dirname, "../public/demo/replay.json"), "utf-8"),
 ) as Replay;
 
-const setup = async () => {
+const openTab = (name: RegExp) => userEvent.click(screen.getByRole("tab", { name }));
+/** Renders the dashboard on its landing tab ("Heute"). */
+const landing = async () => {
   const utils = render(<Dashboard load={async () => data} loadReplay={async () => replay} />);
   await screen.findByRole("tablist");
   return utils;
 };
-const openTab = (name: RegExp) => userEvent.click(screen.getByRole("tab", { name }));
+/** Renders the dashboard and opens the overview, where most tests start. */
+const setup = async () => {
+  const utils = await landing();
+  await openTab(/^Übersicht$/);
+  return utils;
+};
 
 beforeEach(() => {
   window.history.replaceState(null, "", "#");
@@ -32,9 +39,12 @@ beforeEach(() => {
 });
 
 describe("Dashboard shell", () => {
-  it("opens on the overview with the synthetic-data banner and KPI cards", async () => {
-    await setup();
+  it("opens on Today with the synthetic-data banner, then shows the overview KPI cards", async () => {
+    await landing();
     expect(screen.getByRole("note")).toHaveTextContent("synthetischen");
+    expect(screen.getByRole("tab", { name: "Heute" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: /Heute zu tun/ })).toBeInTheDocument();
+    await openTab(/^Übersicht$/);
     expect(screen.getByRole("tab", { name: "Übersicht" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Erwarteter Ausschuss")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Das braucht Aufmerksamkeit" })).toBeInTheDocument();
@@ -156,12 +166,18 @@ describe("approval, settings and new tabs", () => {
     const reason = screen.getAllByRole("combobox", { name: /^Grund:/ })[0]!;
     await userEvent.selectOptions(reason, "promo");
     await userEvent.click(screen.getAllByRole("button", { name: "Einreichen" })[0]!);
-    expect(screen.getAllByText("eingereicht").length).toBe(1);
+    // once in the status cell and once in the decision history below
+    expect(screen.getAllByText("eingereicht").length).toBe(2);
+    expect(screen.getByRole("heading", { name: "Verlauf der Entscheidungen" })).toBeInTheDocument();
     // planner cannot approve
     expect(screen.getByRole("button", { name: /Alle eingereichten freigeben/ })).toBeDisabled();
     await userEvent.selectOptions(screen.getByLabelText("Rolle"), "reviewer");
     await userEvent.click(screen.getByRole("button", { name: /Alle eingereichten freigeben/ }));
     expect(screen.getByText(/✓ freigegeben/)).toBeInTheDocument();
+    const stored = JSON.parse(window.localStorage.getItem("freshcast.settings.v2")!).audit;
+    expect(stored.map((e: { action: string }) => e.action)).toEqual(["approved", "submitted"]);
+    expect(stored[0].role).toBe("reviewer");
+    expect(stored[1].reason).toBe("promo");
   });
 
   it("settings: cost share changes the KPIs and is stored in the browser", async () => {
@@ -261,7 +277,7 @@ describe("csvCell", () => {
 });
 
 describe("accessibility", () => {
-  it.each([/Übersicht/, /Filialvergleich/, /^Freigabe$/, /Preisaktionen/, /Einstellungen/, /Hilfe/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Einsparungen/, /Daten/, /Modell/])(
+  it.each([/^Heute$/, /Marktkarte/, /Übersicht/, /Filialvergleich/, /^Freigabe$/, /Preisaktionen/, /Einstellungen/, /Hilfe/, /Bestellungen/, /Prognose/, /Wochenplan/, /Warnungen/, /KI-Assistent/, /Warengruppen/, /Verfall/, /Was-wäre-wenn|What-if/, /Einsparungen/, /Daten/, /Modell/])(
     "has no detectable violations on tab %s",
     async (name) => {
       const { container } = await setup();
@@ -272,6 +288,15 @@ describe("accessibility", () => {
       expect(results.violations).toEqual([]);
     },
   );
+});
+
+describe("accessibility of the search dialog", () => {
+  it("has no detectable violations while open", async () => {
+    await setup();
+    await userEvent.keyboard("{Control>}k{/Control}");
+    const results = await axe.run(screen.getByRole("dialog"), { rules: { "color-contrast": { enabled: false } } });
+    expect(results.violations).toEqual([]);
+  });
 });
 
 describe("retail chains and the market map", () => {
@@ -311,5 +336,55 @@ describe("retail chains and the market map", () => {
     expect(JSON.parse(window.localStorage.getItem("freshcast.settings.v2")!).chains).toEqual(["PreisPunkt"]);
     await openTab(/Einsparungen/);
     expect(screen.getAllByText(/Handelsketten: PreisPunkt/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Today, quick search and paging", () => {
+  it("Today lists open tasks with counts, jumps to the right tab and remembers ticks per day", async () => {
+    const first = await landing();
+    const list = within(screen.getByRole("heading", { name: /Heute zu tun/ }).closest("section")!);
+    const approve = list.getByRole("checkbox", { name: /noch nicht eingereicht/ });
+    expect(approve).not.toBeChecked();
+    await userEvent.click(approve);
+    expect(JSON.parse(window.localStorage.getItem("freshcast.today.v1")!).done).toContain("approve");
+    first.unmount();
+    await landing();
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: /noch nicht eingereicht/ })).toBeChecked());
+    await userEvent.click(screen.getAllByRole("button", { name: "Öffnen" })[0]!);
+    expect(screen.getByRole("tab", { name: "Freigabe" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("Ctrl+K opens the search, finds an item, Enter opens its forecast, Esc closes", async () => {
+    await setup();
+    await userEvent.keyboard("{Control>}k{/Control}");
+    const dialog = screen.getByRole("dialog", { name: "Suchen und springen" });
+    await userEvent.type(within(dialog).getByRole("combobox"), "lachs");
+    expect(within(dialog).getAllByRole("option")[0]).toHaveTextContent(/Lachsfilet/);
+    await userEvent.keyboard("{Enter}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Prognose" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{Control>}k{/Control}");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("the search finds sections too, and the slash key opens it outside of inputs", async () => {
+    await setup();
+    await userEvent.keyboard("/");
+    const dialog = within(screen.getByRole("dialog"));
+    await userEvent.type(dialog.getByRole("combobox"), "freigabe");
+    await userEvent.click(dialog.getAllByRole("option")[0]!);
+    expect(screen.getByRole("tab", { name: "Freigabe" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("long tables are shown in pages with a show-more row", async () => {
+    const big = { ...data, items: Array.from({ length: 5 }, (_, c) => data.items.map((it) => ({ ...it, store_id: it.store_id.replace(/-\d+$/, `-0${c + 1}`) }))).flat() };
+    render(<Dashboard load={async () => big} loadReplay={async () => replay} />);
+    await screen.findByRole("tablist");
+    await openTab(/^Bestellungen$/);
+    const rows = () => within(screen.getByRole("table")).getAllByRole("row").length;
+    expect(rows()).toBe(1 + 100 + 1); // header, one page, show-more row
+    await userEvent.click(screen.getByRole("button", { name: /Mehr anzeigen/ }));
+    expect(rows()).toBeGreaterThan(102);
   });
 });

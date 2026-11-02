@@ -24,7 +24,7 @@ ruff format . && ruff check . && mypy && pytest
 Backtest: `python -m freshcast.models.backtest` (results in `docs/ml/`).
 
 ## Policy replay
-`python -m freshcast.replenishment.replay` replays four ordering policies over three months and writes `docs/ml/policy-replay.md` plus the data for the dashboard's Savings tab.
+`python -m freshcast.replenishment.replay_report` replays four ordering policies over three months and writes `docs/ml/policy-replay.md` plus the data for the dashboard's Savings tab.
 
 ## API
 See `docs/architecture/api.md`.
@@ -42,6 +42,7 @@ See `docs/architecture/api.md`.
 - [Security review](docs/security/review-v0.1.0.md)
 - [Benchmark](docs/ml/benchmark.md) and [scale benchmark](docs/ml/scale-benchmark.md)
 - [Security: protection and attack testing](docs/security/how-freshcast-is-protected.md)
+- [Quality and test report](docs/quality/test-report.md) and [design tokens](docs/quality/design-tokens.md)
 - [Retail chains per market](docs/data/market-chains.md)
 - [Policy replay](docs/ml/policy-replay.md) and [ADR 0004](docs/adr/0004-profit-optimal-ordering.md)
 - [Changelog](CHANGELOG.md)

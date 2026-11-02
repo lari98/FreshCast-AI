@@ -8,7 +8,8 @@
     "dev": "next dev",
     "prebuild": "node scripts/write-version.mjs",
     "build": "next build",
-    "start": "next start",
+    "serve": "node scripts/static-server.mjs out",
+    "test:scripts": "node --test scripts/static-server.test.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

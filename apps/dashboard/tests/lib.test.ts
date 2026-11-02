@@ -206,3 +206,68 @@ describe("retail chains", () => {
     expect(nv.profit_vs_naive).toBeCloseTo(profit / eur.reduce((s, b) => s + b.stats.naive!.profit, 0) - 1, 3);
   });
 });
+
+import { append, diffWorkflow, MAX_EVENTS, parseAudit } from "@/lib/audit";
+import { buildTasks, closures } from "@/lib/today";
+import { searchEntries } from "@/components/QuickSearch";
+import type { Workflow } from "@/lib/workflow";
+
+describe("audit trail", () => {
+  const before: Workflow = { a: { proposed: 10, qty: 10, packSize: 1, status: "draft" } };
+  const after: Workflow = {
+    a: { proposed: 10, qty: 12, packSize: 1, status: "submitted", reason: "promo" },
+    b: { proposed: 5, qty: 5, packSize: 1, status: "draft" },
+  };
+  it("records only real status changes, with the reason", () => {
+    const ev = diffWorkflow(before, after, "planner", "2026-01-01T08:00:00Z");
+    expect(ev).toEqual([
+      { at: "2026-01-01T08:00:00Z", role: "planner", action: "submitted", key: "a", qty: 12, proposed: 10, reason: "promo" },
+    ]);
+    expect(diffWorkflow(after, after, "planner", "x")).toEqual([]);
+  });
+  it("keeps newest first and caps the log", () => {
+    const many = Array.from({ length: MAX_EVENTS + 20 }, (_, i) => ({ at: String(i), role: "planner" as const, action: "submitted" as const, key: "k", qty: 1, proposed: 1 }));
+    const log = append(many.slice(0, MAX_EVENTS), [many[MAX_EVENTS]!]);
+    expect(log).toHaveLength(MAX_EVENTS);
+    expect(log[0]!.at).toBe(String(MAX_EVENTS));
+  });
+  it("drops malformed stored events instead of crashing", () => {
+    expect(parseAudit("nope")).toEqual([]);
+    expect(parseAudit([{ at: 1 }, null, { at: "t", key: "k", qty: 1, proposed: 1, role: "root", action: "approved" }])).toEqual([]);
+    expect(parseAudit([{ at: "t", key: "k", qty: 1, proposed: 1, role: "reviewer", action: "approved", reason: "<script>" }])[0]).not.toHaveProperty("reason");
+  });
+});
+
+describe("today", () => {
+  const metrics = data.items.map((i) => itemMetrics(i));
+  it("counts what needs doing and follows the role", () => {
+    const planner = buildTasks(metrics, data.items, {}, "planner", data.as_of);
+    expect(planner.find((t) => t.id === "approve")!.count).toBe(metrics.filter((m) => m.orderUnits > 0).length);
+    expect(planner.some((t) => t.id === "review")).toBe(false);
+    const reviewer = buildTasks(metrics, data.items, {}, "reviewer", data.as_of);
+    expect(reviewer.some((t) => t.id === "approve")).toBe(false);
+  });
+  it("finds closing days only when every item of a store is closed", () => {
+    const item = data.items[0]!;
+    const fut = item.series.filter((p) => p.actual === null);
+    const shut = { ...item, series: item.series.map((p) => (p === fut[0] ? { ...p, is_open: false } : p)) };
+    const twin = { ...item, sku: "OTHER", series: item.series.map((p) => (p === fut[0] ? { ...p, is_open: true } : p)) };
+    const day = fut[0]!.date;
+    expect(closures([shut, twin]).map((c) => c.date)).not.toContain(day);
+    expect(closures([shut]).map((c) => c.date)).toContain(day);
+  });
+});
+
+describe("quick search ranking", () => {
+  const entries = [
+    { id: "orders", kind: "tab" as const, label: "Bestellungen" },
+    { id: "k|1", kind: "item" as const, label: "Weizenbrot 750 g", sub: "DE-MUC-001" },
+    { id: "approval", kind: "tab" as const, label: "Freigabe" },
+  ];
+  it("matches label and sub text, ignores accents and case, ranks prefix first", () => {
+    expect(searchEntries(entries, "BESTELL").map((e) => e.id)).toEqual(["orders"]);
+    expect(searchEntries(entries, "muc").map((e) => e.id)).toEqual(["k|1"]);
+    expect(searchEntries(entries, "").every((e) => e.kind === "tab")).toBe(true);
+    expect(searchEntries(entries, "zzz")).toEqual([]);
+  });
+});

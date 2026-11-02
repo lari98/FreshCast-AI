@@ -71,6 +71,8 @@ EXECUTABLE_EXT = re.compile(
     r"(\.|$)",
     re.IGNORECASE,
 )
+# Every byte that is NOT a control character; deleting these leaves only controls.
+_NOT_CONTROL = bytes(range(32, 256)) + b"\t\n\r"
 FORMULA_LEAD = "=+-@\t\r"
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\- ]{0,63}$")
 
@@ -126,7 +128,7 @@ def _inspect(data: bytes) -> None:
     if b"\x00" in body:
         raise UploadRejected("binary content (NUL byte) found")
     # Control characters other than tab, CR and LF do not occur in exports.
-    controls = sum(1 for b in body if b < 32 and b not in (9, 10, 13))
+    controls = len(body.translate(None, _NOT_CONTROL))
     if body and controls / len(body) > MAX_CONTROL_SHARE:
         raise UploadRejected("too many control characters for a text file")
     try:

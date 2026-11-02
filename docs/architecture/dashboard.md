@@ -64,3 +64,12 @@ countries, so the chain is a second dimension next to the market, not part of it
 - The demo chains (MarktHaus, PreisPunkt, AlpenFrisch) are **fictional**. Real chains are
   not attached to synthetic numbers; see `docs/data/market-chains.md`.
 
+
+## Quality pass (Nov 2026)
+
+- **Today tab**: prioritised tasks (approvals, expiry, stock-outs, demand spikes, closures) derived in `lib/today.ts`.
+- **Quick search**: command palette over tabs and items (`QuickSearch.tsx`).
+- **Audit trail**: every settings and workflow change is logged with before/after values (`lib/audit.ts`, `AuditPanel`).
+- **Paging**: long tables use `PagedRows`.
+- **Fast mode**: `scripts/run-dashboard.ps1` serves the production export with `scripts/static-server.mjs`; `-Dev` for hot reload.
+- **Palette**: see `docs/quality/design-tokens.md`. Test results: `docs/quality/test-report.md`.

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (quality pass: speed, structure, features, palette)
+
+- Full test and audit battery with written report: `docs/quality/test-report.md` (core 169 tests 96.36 %, API 48 tests 96.35 %, dashboard 133 tests, linters, mypy, Bandit, pip-audit, npm audit all clean).
+- Speed: production-mode dashboard by default (`scripts/run-dashboard.ps1`, `-Dev` for hot reload), paged tables, memoisation, faster upload analysis.
+- Structure: dashboard hooks and tab registry split out, replay reporting moved to `replay_report.py`, `clean_sales` split.
+- Features: Today tab, quick search, audit trail with before/after values.
+- Design: "Aubergine & Teal" palette with computed contrast (`docs/quality/design-tokens.md`).
+- Security workflow runs static-server tests.
+
 ## Unreleased (security hardening and live update)
 - Upload guard (`freshcast.security.upload_guard`): refuses disguised executables, archives, PDFs, Office files, images, scripts and markup payloads, NUL/control characters, oversized lines and columns, unsafe file names; cleans text cells (formula injection) and drops unsafe store/SKU ids; optional ClamAV scan that fails closed; refusals are logged without content.
 - API: security headers, request size limit, in-memory rate limit (uploads 20/min per address), upload checks on sales and stock files.

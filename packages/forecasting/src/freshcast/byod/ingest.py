@@ -14,6 +14,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass, field
 from datetime import date
+from functools import lru_cache
 from typing import Any
 
 import pandas as pd
@@ -160,8 +161,31 @@ def clean_sales(
         raise IngestError([f"missing required column(s): {', '.join(missing)}"])
     if len(raw) > MAX_ROWS:
         raise IngestError([f"more than {MAX_ROWS:,} rows; split the file by store"])
-    comma = bool(raw.attrs.get("decimal_comma", False))
 
+    df = _drop_unusable(_typed_frame(raw), report)
+    if as_of is not None:
+        df = df[df["business_date"] < pd.Timestamp(as_of)]
+    if df.empty:
+        raise IngestError(["no usable sales rows"])
+    as_of_date = as_of or (df["business_date"].max() + pd.Timedelta(days=1)).date()
+    panel = _daily_panel(df, as_of_date, report)
+    report.date_from = panel["business_date"].min().date().isoformat()
+    report.date_to = panel["business_date"].max().date().isoformat()
+    report.rows_used = len(panel)
+    report.series_used = panel.groupby(["store_id", "sku"]).ngroups
+    if report.series_used > MAX_SERIES:
+        raise IngestError(
+            [
+                f"{report.series_used} series exceed the limit of {MAX_SERIES}; "
+                "split by store"
+            ]
+        )
+    return panel, report, as_of_date
+
+
+def _typed_frame(raw: pd.DataFrame) -> pd.DataFrame:
+    """Typed columns from the raw strings; free text is cleaned (see upload_guard)."""
+    comma = bool(raw.attrs.get("decimal_comma", False))
     df = pd.DataFrame(
         {
             "store_id": raw["store_id"].str.strip(),
@@ -172,21 +196,17 @@ def clean_sales(
     )
     for col in ("product_name", "category", "chain"):
         if col in raw.columns:
-            raw = raw.assign(**{col: raw[col].map(clean_text)})
-    for col, default in (
-        ("product_name", None),
-        ("category", None),
-        ("chain", None),
-        ("is_open", None),
-    ):
-        if col in raw.columns:
-            df[col] = raw[col].str.strip()
-        elif default is not None:
-            df[col] = default
+            df[col] = raw[col].map(clean_text)
+    if "is_open" in raw.columns:
+        df["is_open"] = raw["is_open"].str.strip()
     for col in ("unit_price", "shelf_life_days", "pack_size"):
         if col in raw.columns:
             df[col] = _numeric(raw[col], comma)
+    return df
 
+
+def _drop_unusable(df: pd.DataFrame, report: QualityReport) -> pd.DataFrame:
+    """Drop unreadable and negative rows (or reject the file if too many are bad)."""
     bad = df["business_date"].isna() | df["units_sold"].isna()
     bad |= ~(
         df["store_id"].map(is_safe_id).astype(bool)
@@ -209,13 +229,13 @@ def clean_sales(
     if (df["units_sold"] % 1 != 0).any():
         report.warnings.append("fractional quantities were rounded to whole units")
     df["units_sold"] = df["units_sold"].round()
+    return df
 
-    if as_of is not None:
-        df = df[df["business_date"] < pd.Timestamp(as_of)]
-    if df.empty:
-        raise IngestError(["no usable sales rows"])
-    as_of_date = as_of or (df["business_date"].max() + pd.Timedelta(days=1)).date()
 
+def _daily_panel(
+    df: pd.DataFrame, as_of_date: date, report: QualityReport
+) -> pd.DataFrame:
+    """Sum duplicates, give every series a full calendar and re-attach the metadata."""
     meta_cols = [
         c
         for c in (
@@ -236,7 +256,6 @@ def clean_sales(
             "were summed"
         )
     daily = df.groupby(keys, as_index=False)[["units_sold"]].sum()
-
     panel, filled = _fill_calendar(daily, as_of_date, report)
     if filled:
         report.warnings.append(
@@ -245,18 +264,13 @@ def clean_sales(
         )
     if meta is not None:
         panel = panel.merge(meta.reset_index(), on=["store_id", "sku"], how="left")
-    report.date_from = panel["business_date"].min().date().isoformat()
-    report.date_to = panel["business_date"].max().date().isoformat()
-    report.rows_used = len(panel)
-    report.series_used = panel.groupby(["store_id", "sku"]).ngroups
-    if report.series_used > MAX_SERIES:
-        raise IngestError(
-            [
-                f"{report.series_used} series exceed the limit of {MAX_SERIES}; "
-                "split by store"
-            ]
-        )
-    return panel, report, as_of_date
+    return panel
+
+
+@lru_cache(maxsize=200_000)
+def _calendar_flags(country: Country, day: date) -> tuple[bool, bool]:
+    """(is open, is holiday); cached because every series of a country shares it."""
+    return is_store_open(country, day), is_holiday(country, day)
 
 
 def _fill_calendar(
@@ -280,8 +294,9 @@ def _fill_calendar(
         idx = pd.date_range(start, last, freq="D")
         full = g.set_index("business_date")["units_sold"].reindex(idx)
         country = _country(str(store))
-        is_open = pd.Series([is_store_open(country, d.date()) for d in idx], index=idx)
-        holiday = pd.Series([is_holiday(country, d.date()) for d in idx], index=idx)
+        flags = [_calendar_flags(country, d.date()) for d in idx]
+        is_open = pd.Series([f[0] for f in flags], index=idx)
+        holiday = pd.Series([f[1] for f in flags], index=idx)
         # Sales on a day the calendar says closed: treat the store as open that day.
         is_open = is_open | full.fillna(0).gt(0)
         filled += int((full.isna() & is_open).sum())

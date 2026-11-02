@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { PagedRows } from "./PagedRows";
+import { useMemo, useState } from "react";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
 import { bestMarkdown, lotExcess, markdownOutcome } from "@/lib/markdown";
@@ -17,7 +18,7 @@ export function MarkdownTab({ items, lang, t, onOpen }: Props) {
   const [discount, setDiscount] = useState(0.3);
   const [elasticity, setElasticity] = useState(1.5);
 
-  const rows = items
+  const rows = useMemo(() => items
     .map((item) => {
       const lots = lotExcess(item);
       const excess = lots.reduce((s, l) => s + l.excess, 0);
@@ -28,7 +29,8 @@ export function MarkdownTab({ items, lang, t, onOpen }: Props) {
       };
     })
     .filter((r) => r.excess > 0)
-    .sort((a, b) => b.excess * b.item.unit_price - a.excess * a.item.unit_price);
+    .sort((a, b) => b.excess * b.item.unit_price - a.excess * a.item.unit_price),
+  [items, discount, elasticity]);
 
   const total = { EUR: 0, CHF: 0 };
   for (const r of rows) total[r.item.currency] += r.outcome.net;
@@ -70,7 +72,7 @@ export function MarkdownTab({ items, lang, t, onOpen }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                <PagedRows rows={rows} colSpan={8} t={t} render={(r) => (
                   <tr key={`${r.item.store_id}|${r.item.sku}`}>
                     <th scope="row">
                       <button type="button" className="link" onClick={() => onOpen(`${r.item.store_id}|${r.item.sku}`)}>
@@ -86,7 +88,7 @@ export function MarkdownTab({ items, lang, t, onOpen }: Props) {
                     </td>
                     <td>{r.best ? formatPercent(r.best.markdown, lang, 0) : t.mdNone}</td>
                   </tr>
-                ))}
+                )} />
               </tbody>
             </table>
           </div>

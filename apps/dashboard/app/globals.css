@@ -1,23 +1,28 @@
-/* Palette: indigo primary, teal for good, amber for watch, coral for urgent.
-   Defined for light, dark (system) and an explicit data-theme switch. */
+/* Palette "Aubergine & Teal": a warm paper background, aubergine ink and accent,
+   teal for good, amber for watch, tomato for urgent, saffron as the highlight.
+   Defined for light, dark (system) and an explicit data-theme switch. Every text
+   pair was checked for WCAG AA contrast (see docs/quality/design-tokens.md). */
 :root {
-  --bg: #f3f5fb; --surface: #ffffff; --surface-2: #eef2fb; --text: #121c36; --muted: #4a5778;
-  --border: #d3dbec; --accent: #2849d6; --accent-text: #ffffff;
-  --band: #d9e3ff; --warn: #8f5200; --crit: #c0262d; --ok: #0b7459; --focus: #0b57d0;
+  --bg: #faf5ee; --surface: #ffffff; --surface-2: #f4ecf3; --text: #24122b; --muted: #5d4a63;
+  --border: #e2d4e0; --accent: #7a2e8e; --accent-text: #ffffff; --accent-2: #0e8f7d; --saffron: #f2a93b;
+  --band: #efdcf3; --warn: #8a4b00; --crit: #b3261e; --ok: #0a7a68; --focus: #1f5fbf;
+  --shadow: rgba(36, 18, 43, 0.08);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0c1224; --surface: #141c34; --surface-2: #1b2544; --text: #e9eefc; --muted: #a8b5d8;
-    --border: #2b3760; --accent: #8aaaff; --accent-text: #0a1229;
-    --band: #243569; --warn: #ffc266; --crit: #ff9196; --ok: #54d6aa; --focus: #9bbcff;
+    --bg: #160d1c; --surface: #21142a; --surface-2: #2b1b36; --text: #f6ecf8; --muted: #c7b0cf;
+    --border: #43294f; --accent: #e0a3f0; --accent-text: #2a0f33; --accent-2: #4fd1bb; --saffron: #ffc36b;
+    --band: #4a2a59; --warn: #ffc36b; --crit: #ff9e96; --ok: #5fe0c8; --focus: #8ec5ff;
+    --shadow: rgba(0, 0, 0, 0.35);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0c1224; --surface: #141c34; --surface-2: #1b2544; --text: #e9eefc; --muted: #a8b5d8;
-  --border: #2b3760; --accent: #8aaaff; --accent-text: #0a1229;
-  --band: #243569; --warn: #ffc266; --crit: #ff9196; --ok: #54d6aa; --focus: #9bbcff;
+  --bg: #160d1c; --surface: #21142a; --surface-2: #2b1b36; --text: #f6ecf8; --muted: #c7b0cf;
+  --border: #43294f; --accent: #e0a3f0; --accent-text: #2a0f33; --accent-2: #4fd1bb; --saffron: #ffc36b;
+  --band: #4a2a59; --warn: #ffc36b; --crit: #ff9e96; --ok: #5fe0c8; --focus: #8ec5ff;
+  --shadow: rgba(0, 0, 0, 0.35);
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text);
@@ -31,7 +36,11 @@ body { margin: 0; background: var(--bg); color: var(--text);
 h1 { font-size: 1.25rem; margin: 0; color: var(--accent); letter-spacing: -0.01em; }
 h2 { font-size: 1.05rem; margin: 0 0 8px; }
 h3 { font-size: 1rem; margin: 16px 0 4px; }
-.top { background: var(--surface); border-bottom: 1px solid var(--border); }
+.top { background: var(--surface); border-bottom: 1px solid var(--border);
+  border-image: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, var(--saffron)) 1;
+  border-bottom-width: 4px; }
+h1::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; margin-right: 0.45em;
+  border-radius: 50% 50% 50% 8%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); vertical-align: -0.05em; }
 .banner { margin: 0; padding: 8px 16px; background: var(--band); font-size: 0.9rem; }
 main { padding: 16px; max-width: 1200px; margin: 0 auto; }
 label { display: inline-flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
@@ -41,7 +50,7 @@ select { min-height: 44px; padding: 6px 8px; font: inherit; color: var(--text);
 .grid-2 { display: grid; gap: 16px; grid-template-columns: 1fr; margin-bottom: 16px; align-items: start; }
 @media (min-width: 900px) { .grid-2 { grid-template-columns: 3fr 2fr; } }
 .card { background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(18, 28, 54, 0.06); }
+  border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px var(--shadow); }
 .card-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .btn { min-height: 44px; padding: 8px 14px; font: inherit; cursor: pointer;
   color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
@@ -164,3 +173,25 @@ td select { min-height: 44px; max-width: 170px; }
   font: inherit; text-align: left; color: inherit; background: transparent; border: 0; cursor: pointer; }
 .chainmap .cell-btn:hover { background: var(--band); }
 .chainmap td.on { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* Today list, decision history, quick search */
+.tasks { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.tasks li { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border: 1px solid var(--border); border-left: 4px solid var(--accent-2); border-radius: 8px; background: var(--surface-2); }
+.tasks li.done { opacity: 0.65; border-left-color: var(--border); }
+.tasks li.done span { text-decoration: line-through; }
+.check { flex-direction: row; align-items: center; gap: 10px; font-size: 1rem; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+.plain { margin: 8px 0 0; padding-left: 20px; }
+.overlay { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: flex-start;
+  padding: 10vh 16px 16px; background: color-mix(in srgb, var(--text) 45%, transparent); }
+.palette { width: min(640px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; box-shadow: 0 12px 40px var(--shadow); display: grid; gap: 8px; }
+.palette input { min-height: 44px; padding: 8px 12px; font: inherit; color: var(--text); background: var(--bg);
+  border: 2px solid var(--accent); border-radius: 8px; }
+.palette ul { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow: auto; }
+.palette li { padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+.palette li.on { background: var(--band); }
+.palette .tag { display: inline-block; min-width: 4.5em; margin-right: 8px; padding: 1px 8px; font-size: 0.75rem;
+  border-radius: 999px; background: var(--surface-2); color: var(--muted); text-align: center; }
+.palette .hint { margin: 0; }

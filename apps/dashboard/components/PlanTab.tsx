@@ -1,3 +1,4 @@
+import { PagedRows } from "./PagedRows";
 import { formatNumber } from "@/lib/format";
 import type { Strings } from "@/lib/i18n";
 import { future } from "@/lib/alerts";
@@ -44,7 +45,7 @@ export function PlanTab({ items, lang, t, onOpen }: Props) {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ item, cells, total }) => (
+            <PagedRows rows={rows} colSpan={dates.length + 3} t={t} render={({ item, cells, total }) => (
               <tr key={`${item.store_id}|${item.sku}`}>
                 <th scope="row">
                   <button type="button" className="link" onClick={() => onOpen(`${item.store_id}|${item.sku}`)}>
@@ -63,7 +64,7 @@ export function PlanTab({ items, lang, t, onOpen }: Props) {
                 ))}
                 <td><strong>{formatNumber(total, lang)}</strong></td>
               </tr>
-            ))}
+            )} />
           </tbody>
           <tfoot>
             <tr>

@@ -12,15 +12,18 @@ import { ApprovalTab } from "./ApprovalTab";
 import { HelpTab } from "./HelpTab";
 import { MarkdownTab } from "./MarkdownTab";
 import { SettingsTab } from "./SettingsTab";
-import type { Theme } from "./SettingsTab";
 import { StoresTab } from "./StoresTab";
 import { PRESETS, availableChains, availableCurrencies, availableMarkets, filterMarkets, presetFor } from "@/lib/markets";
 import { MapTab } from "./MapTab";
+import { QuickSearch } from "./QuickSearch";
+import type { SearchEntry } from "./QuickSearch";
+import { TodayTab } from "./TodayTab";
 import { UpdateWatcher } from "./UpdateWatcher";
 import { COST_SHARE } from "@/lib/kpi";
 import type { ItemMetrics } from "@/lib/kpi";
-import { decide, parseWorkflow, setQuantity, setReason, submit } from "@/lib/workflow";
-import type { Reason, Role, Workflow } from "@/lib/workflow";
+import { append, diffWorkflow } from "@/lib/audit";
+import { decide, setQuantity, setReason, submit } from "@/lib/workflow";
+import type { Reason, Workflow } from "@/lib/workflow";
 import { AlertsTab } from "./AlertsTab";
 import { AssistantTab } from "./AssistantTab";
 import { CategoriesTab } from "./CategoriesTab";
@@ -33,28 +36,14 @@ import { OrdersTab } from "./OrdersTab";
 import { OverviewTab } from "./OverviewTab";
 import { ScenariosTab } from "./ScenariosTab";
 import { Tabs } from "./Tabs";
+import { useHashTab } from "./useHashTab";
+import { useSettings } from "./useSettings";
 
 interface Props {
   /** Injected in tests; defaults to the demo/API loader. */
   load?: () => Promise<DashboardData>;
   /** Policy replay (Savings tab); defaults to the bundled demo file. */
   loadReplay?: () => Promise<Replay>;
-}
-
-const TAB_IDS = [
-  "overview", "map", "stores", "alerts", "orders", "approval", "whatif", "forecast", "plan", "categories",
-  "expiry", "markdown", "savings", "assistant", "model", "data", "settings", "help",
-] as const;
-const STORAGE_KEY = "freshcast.settings.v2";
-type TabId = (typeof TAB_IDS)[number];
-
-function tabFromHash(): TabId {
-  try {
-    const h = window.location.hash.replace("#", "");
-    return (TAB_IDS as readonly string[]).includes(h) ? (h as TabId) : "overview";
-  } catch {
-    return "overview";
-  }
 }
 
 export function Dashboard({ load = () => loadData(), loadReplay = () => defaultLoadReplay() }: Props) {
@@ -66,24 +55,19 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   const [replayFailed, setReplayFailed] = useState(false);
   const [store, setStore] = useState<string>(""); // "" = all stores
   const [selected, setSelected] = useState<string>("");
-  const [workflow, setWorkflow] = useState<Workflow>({});
-  const [role, setRole] = useState<Role>("planner");
-  const [costShare, setCostShare] = useState(COST_SHARE);
-  const [theme, setTheme] = useState<Theme>("auto");
-  const [restored, setRestored] = useState(false);
-  // null = no restriction (all markets / all currencies in the data)
-  const [marketSel, setMarketSel] = useState<string[] | null>(null);
-  const [currencySel, setCurrencySel] = useState<string[] | null>(null);
-  const [chainSel, setChainSel] = useState<string[] | null>(null);
-  const [tab, setTab] = useState<TabId>("overview");
+  const [tab, changeTab] = useHashTab();
   const t = STRINGS[lang];
+  const {
+    workflow, setWorkflow, role, setRole, costShare, setCostShare, theme, setTheme,
+    marketSel, setMarketSel, currencySel, setCurrencySel, chainSel, setChainSel, audit, setAudit,
+  } = useSettings(data?.source === "upload");
 
   const show = useCallback((d: DashboardData) => {
     setData(d);
     setStore("");
     setSelected(d.items[0] ? itemKey(d.items[0]) : "");
     setWorkflow({});
-  }, []);
+  }, [setWorkflow]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,23 +95,6 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tab <-> URL hash, so a tab can be bookmarked or shared.
-  useEffect(() => {
-    const onHash = () => setTab(tabFromHash());
-    queueMicrotask(onHash); // read the initial hash after hydration
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-
-  function changeTab(id: string) {
-    setTab(id as TabId);
-    try {
-      window.history.replaceState(null, "", `#${id}`);
-    } catch {
-      /* Some embedded viewers forbid history changes; the tab still switches. */
-    }
-  }
-
   const allItems = useMemo(() => data?.items ?? [], [data]);
   const markets = useMemo(() => availableMarkets(allItems), [allItems]);
   const currencies = useMemo(() => availableCurrencies(allItems), [allItems]);
@@ -149,6 +116,21 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
     () => marketItems.filter((i) => !activeStore || i.store_id === activeStore),
     [marketItems, activeStore],
   );
+  const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? "");
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      } else if (e.key === "/" && !typing) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const preset = presetFor(selMarkets, markets);
   const nothingSelected = allItems.length > 0 && marketItems.length === 0;
   const toggle = (list: string[], all: string[], value: string) => {
@@ -157,7 +139,6 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
     else next.add(value);
     return all.filter((x) => next.has(x));
   };
-  const metrics = useMemo(() => scope.map((i) => itemMetrics(i, costShare)), [scope, costShare]);
   const item = scope.find((i) => itemKey(i) === selected) ?? scope[0];
   const key = item ? itemKey(item) : "";
 
@@ -169,57 +150,30 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
     () => (data?.items ?? []).map((i) => itemMetrics(i, costShare)),
     [data, costShare],
   );
+  // Metrics are computed once for every item; the filtered view just picks from them.
+  const metrics = useMemo(() => {
+    const keys = new Set(scope.map(itemKey));
+    return allMetrics.filter((m) => keys.has(m.key));
+  }, [scope, allMetrics]);
   const lookup = (k: string) => {
     const m = allMetrics.find((x) => x.key === k);
     return { proposed: m?.orderUnits ?? 0, packSize: m?.item.proposal.order_multiple ?? 1 };
   };
-  const onSubmit = (keys: string[]) => setWorkflow((wf) => submit(wf, keys, lookup));
-  const onDecide = (keys: string[], ok: boolean) => setWorkflow((wf) => decide(wf, keys, role, ok));
+  // Every status change is also written to the local decision history.
+  const commit = (next: Workflow) => {
+    setAudit((log) => append(log, diffWorkflow(workflow, next, role, new Date().toISOString())));
+    setWorkflow(next);
+  };
+  const onSubmit = (keys: string[]) => commit(submit(workflow, keys, lookup));
+  const onDecide = (keys: string[], ok: boolean) => commit(decide(workflow, keys, role, ok));
   const onQty = (m: ItemMetrics, qty: number) =>
     setWorkflow((wf) => setQuantity(wf, m.key, m.orderUnits, m.item.proposal.order_multiple, qty));
   const onReason = (k: string, reason: Reason | undefined) =>
     setWorkflow((wf) => setReason(wf, k, reason));
 
-  // Restore settings and the order workflow (demo data only) from this browser.
-  useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null");
-        if (raw && typeof raw === "object") {
-          if (typeof raw.costShare === "number" && raw.costShare >= 0.4 && raw.costShare <= 0.8) setCostShare(raw.costShare);
-          if (["auto", "light", "dark"].includes(raw.theme)) setTheme(raw.theme);
-          if (raw.role === "reviewer" || raw.role === "planner") setRole(raw.role);
-          const strings = (v: unknown) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : null);
-          setMarketSel(strings(raw.markets));
-          setCurrencySel(strings(raw.currencies));
-          setChainSel(strings(raw.chains));
-          setWorkflow(parseWorkflow(raw.workflow));
-        }
-      } catch {
-        /* Storage can be blocked (private window, embedded viewer); start fresh. */
-      }
-      setRestored(true);
-    });
-  }, []);
-  useEffect(() => {
-    if (!restored) return;
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ costShare, theme, role, markets: marketSel, currencies: currencySel, chains: chainSel, workflow: data?.source === "upload" ? {} : workflow }),
-      );
-    } catch {
-      /* Not persisted; the page still works. */
-    }
-  }, [restored, costShare, theme, role, marketSel, currencySel, chainSel, workflow, data]);
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "auto") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", theme);
-  }, [theme]);
-
   const groups = [
     { label: t.groupOverview, tabs: [
+      { id: "today", label: t.tabToday },
       { id: "overview", label: t.tabOverview },
       { id: "map", label: t.tabMap },
       { id: "stores", label: t.tabStores },
@@ -249,6 +203,11 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
       { id: "settings", label: t.tabSettings },
       { id: "help", label: t.tabHelp },
     ] },
+  ];
+
+  const searchEntries: SearchEntry[] = [
+    ...groups.flatMap((g) => g.tabs.map((x) => ({ id: x.id, kind: "tab" as const, label: x.label, sub: g.label }))),
+    ...scope.map((i) => ({ id: itemKey(i), kind: "item" as const, label: i.name[lang], sub: `${i.store_id}${i.chain ? ` · ${i.chain}` : ""}` })),
   ];
 
   return (
@@ -306,6 +265,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
               ))}
             </select>
           </label>
+          <button type="button" className="btn" onClick={() => setSearchOpen(true)}>{t.searchOpen}</button>
           <label>
             {t.language}
             <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
@@ -324,6 +284,12 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
         {nothingSelected && <p role="alert">{t.marketsNone}</p>}
         {data && (
           <Tabs groups={groups} active={tab} onChange={changeTab} label={t.tabsLabel}>
+            {tab === "today" && (
+              <TodayTab
+                metrics={metrics} items={scope} workflow={workflow} role={role} asOf={data.as_of}
+                lang={lang} t={t} onGo={changeTab}
+              />
+            )}
             {tab === "overview" && (
               <OverviewTab metrics={metrics} lang={lang} t={t} onOpen={openForecast} />
             )}
@@ -389,7 +355,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
               <ApprovalTab
                 metrics={metrics} workflow={workflow} role={role} costShare={costShare}
                 onRole={setRole} onQty={onQty} onReason={onReason} onSubmit={onSubmit}
-                onDecide={onDecide} onOpen={openForecast} lang={lang} t={t}
+                onDecide={onDecide} onOpen={openForecast} audit={audit} lang={lang} t={t}
               />
             )}
             {tab === "markdown" && <MarkdownTab items={scope} lang={lang} t={t} onOpen={openForecast} />}
@@ -426,6 +392,18 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
           </Tabs>
         )}
       </main>
+      {searchOpen && (
+        <QuickSearch
+          entries={searchEntries}
+          t={t}
+          onClose={() => setSearchOpen(false)}
+          onPick={(e) => {
+            setSearchOpen(false);
+            if (e.kind === "tab") changeTab(e.id);
+            else openForecast(e.id);
+          }}
+        />
+      )}
       {process.env.NEXT_PUBLIC_BUILD && (
         <footer className="build">{t.build}: {process.env.NEXT_PUBLIC_BUILD}</footer>
       )}

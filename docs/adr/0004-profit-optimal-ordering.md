@@ -12,7 +12,7 @@ purchase price once it expires, a missed sale costs the margin.
 1. Add a **newsvendor target** (`replenishment/newsvendor.py`): cover demand up
    to the critical ratio `CR = margin / (margin + cost * overage_factor)`, with
    the standard deviation taken from the calibrated 80 % interval.
-2. Evaluate policies by **replaying history** (`replenishment/replay.py`) instead
+2. Evaluate policies by **replaying history** (`replenishment/replay.py`, reports in `replay_report.py`) instead
    of arguing from theory: four policies (naive, v1 rule, newsvendor, planner)
    are played day by day over three months with FEFO stock, walk-forward models
    and only information available at order time. Stock is conserved by test.
