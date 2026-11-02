@@ -77,3 +77,10 @@ countries, so the chain is a second dimension next to the market, not part of it
 ## Efficiency (v0.3.0)
 
 Energy-saving mode (setting), update check only in visible tabs, per-tab error boundary, 304/Brotli static server. See `docs/quality/efficiency.md`.
+
+## Offline use (v0.4.0)
+
+`scripts/sw.template.js` becomes `public/sw.js` with a build id (`scripts/write-version.mjs`). Same-origin GET only; `version.json`, the API and uploads never go through it.
+Strategies: build files cache-first, pages network-first with saved fallback, demo data stale-while-revalidate. Install stores the shell (fails safely, old worker stays),
+activation deletes older `freshcast-*` caches. `useOffline` registers it in production builds and offers reset. Tests: `tests/serviceworker.test.ts` (runs the real worker source in a fake worker),
+`tests/efficiency.test.tsx`, and a real-Chromium check (offline reload, update, reset) recorded in `docs/releases/v0.4.0.md`.

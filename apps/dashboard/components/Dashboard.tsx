@@ -21,6 +21,7 @@ import { TodayTab } from "./TodayTab";
 import { UpdateWatcher } from "./UpdateWatcher";
 import { EcoContext } from "./EcoContext";
 import { TabBoundary } from "./TabBoundary";
+import { useOffline } from "./useOffline";
 import { COST_SHARE } from "@/lib/kpi";
 import type { ItemMetrics } from "@/lib/kpi";
 import { append, diffWorkflow } from "@/lib/audit";
@@ -59,6 +60,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   const [selected, setSelected] = useState<string>("");
   const [tab, changeTab] = useHashTab();
   const t = STRINGS[lang];
+  const offline = useOffline();
   const {
     workflow, setWorkflow, role, setRole, costShare, setCostShare, theme, setTheme,
     eco, setEco, marketSel, setMarketSel, currencySel, setCurrencySel, chainSel, setChainSel, audit, setAudit,
@@ -215,6 +217,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
   return (
     <EcoContext.Provider value={eco}>
       <a className="skip" href="#main">{t.skip}</a>
+      {!offline.online && <p className="banner-box" role="status">{t.offlineNow}</p>}
       <UpdateWatcher t={t} busy={data?.source === "upload"} intervalMs={eco ? 15 * 60_000 : undefined} />
       <header className="top">
         <h1>{t.title}</h1>
@@ -370,7 +373,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
                 onToggleChain={(c) => setChainSel(toggle([...selChains], chains, c))}
                 currencies={currencies} selectedCurrencies={selCurrencies}
                 onToggleCurrency={(c) => setCurrencySel(toggle([...selCurrencies], currencies, c))}
-                costShare={costShare} onCost={setCostShare} theme={theme} onTheme={setTheme} eco={eco} onEco={setEco}
+                costShare={costShare} onCost={setCostShare} theme={theme} onTheme={setTheme} eco={eco} onEco={setEco} offline={offline.state} onOfflineReset={offline.reset}
                 onReset={() => { setCostShare(COST_SHARE); setTheme("auto"); setMarketSel(null); setCurrencySel(null); setChainSel(null); setEco(false); }} t={t}
               />
             )}
@@ -409,7 +412,7 @@ export function Dashboard({ load = () => loadData(), loadReplay = () => defaultL
         />
       )}
       {process.env.NEXT_PUBLIC_BUILD && (
-        <footer className="build">{t.build}: {process.env.NEXT_PUBLIC_BUILD}</footer>
+        <footer className="build">{t.build}: {process.env.NEXT_PUBLIC_BUILD}{offline.state === "ready" ? ` · ${t.offlineReady}` : ""}</footer>
       )}
     </EcoContext.Provider>
   );

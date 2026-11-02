@@ -72,7 +72,12 @@ def analyze_upload(
             return cached  # same upload again: no training, no processor load
         try:
             with request.app.state.analyze_gate.slot():
-                result = analyze(sales_data, stock_data, as_of)
+                result = analyze(
+                    sales_data,
+                    stock_data,
+                    as_of,
+                    True if settings.analyze_per_store else None,
+                )
         except Busy as exc:
             raise HTTPException(
                 status.HTTP_503_SERVICE_UNAVAILABLE,

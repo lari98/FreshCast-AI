@@ -30,3 +30,7 @@ class Settings(BaseSettings):
     analyze_max_concurrent: int = 2
     analyze_cache_entries: int = 8
     analyze_cache_ttl_seconds: int = 900
+    # One model per store plus a per-store forecast cache: a re-upload that changes one
+    # store retrains only that store (benchmark: 14.5 s instead of 33.0 s), but accuracy
+    # is slightly lower (WAPE 0.277 against 0.271), so it is off by default.
+    analyze_per_store: bool = False

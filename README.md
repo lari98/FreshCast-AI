@@ -39,10 +39,11 @@ See `docs/architecture/api.md`.
 
 ## Version
 
-**Current: v0.3.0** (2026-11-02). Versions follow [Semantic Versioning](https://semver.org); every release has a git tag, an entry in [CHANGELOG.md](CHANGELOG.md) and a page in [docs/releases](docs/releases). The number lives in `VERSION` and in each package manifest.
+**Current: v0.4.0** (2026-11-02). Versions follow [Semantic Versioning](https://semver.org); every release has a git tag, an entry in [CHANGELOG.md](CHANGELOG.md) and a page in [docs/releases](docs/releases). The number lives in `VERSION` and in each package manifest.
 
 | Version | Date | What changed | Effect for users |
 |---|---|---|---|
+| v0.4.0 | 2026-11-02 | Offline dashboard (service worker with safe updates), optional per-store forecast cache, version guard test | Works without internet after the first visit; re-uploads with one changed store take 56 % less time (opt-in) |
 | v0.3.0 | 2026-11-02 | Less network use (Brotli, 304, rarer update checks), less processor load (1 thread, result cache, load gate, low-priority script), energy-saving mode, per-tab error safety, extra server hardening | Cooler, quieter computer, less data, same speed; one failing tab no longer breaks the dashboard |
 | v0.2.0 | 2026-11-02 | Retail chains and market map, upload guard and API hardening, live update, Today tab, quick search, audit trail, paging, fast run mode, new palette, test report | Faster, safer, shows more per market; dashboard updates itself without restart |
 | v0.1.0 | first release | Forecasting, replenishment, dashboard, BYOD, AWS CDK | Initial portfolio release |
@@ -52,7 +53,7 @@ See `docs/architecture/api.md`.
 - [Security review](docs/security/review-v0.1.0.md)
 - [Benchmark](docs/ml/benchmark.md) and [scale benchmark](docs/ml/scale-benchmark.md)
 - [Security: protection and attack testing](docs/security/how-freshcast-is-protected.md)
-- [Efficiency report](docs/quality/efficiency.md)
+- [Efficiency report](docs/quality/efficiency.md) and [per-store forecast benchmark](docs/ml/per-store-forecast.md)
 - [Quality and test report](docs/quality/test-report.md) and [design tokens](docs/quality/design-tokens.md)
 - [Retail chains per market](docs/data/market-chains.md)
 - [Policy replay](docs/ml/policy-replay.md) and [ADR 0004](docs/adr/0004-profit-optimal-ordering.md)

@@ -75,3 +75,10 @@ secret scanning in CI.
 - API: at most two analyses at once (503 with Retry-After beyond that), so an upload flood cannot exhaust the processor; readiness probe.
 - Damaged or hostile saved settings in the browser are ignored; one failing tab cannot take the dashboard down.
 - Still true: no third-party penetration test, and no system is "unhackable".
+
+## Added in v0.4.0
+
+- The service worker handles same-origin GET requests only: uploads, API calls and other sites never pass through it, so nothing a user uploads is stored. It adds no permission and needs no CSP change (`script-src 'self'`).
+- Only successful responses are stored; `version.json` is never cached, so a compromised or stale copy is replaced on the next build.
+- Per-store forecast cache: in memory only, keyed by a hash of the exact data; one user cannot receive another's forecast without uploading identical numbers.
+- "Delete offline copy" removes the worker and its caches at any time.

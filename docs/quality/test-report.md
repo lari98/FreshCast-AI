@@ -75,3 +75,14 @@ paged tables, rewritten palette (see `design-tokens.md`).
 | `pip-audit`, `npm audit --omit=dev` | no known vulnerabilities, 0 vulnerabilities |
 
 Efficiency measurements: see `efficiency.md`.
+
+## Re-run for v0.4.0 (2026-11-02)
+
+| Suite | Result |
+|---|---|
+| Core pytest | 178 passed (incl. forecast cache and version guard), coverage 96.69 % |
+| API pytest | 56 passed, coverage 96.52 % |
+| Dashboard vitest | 156 passed (8 files), incl. service worker logic with a mutation check |
+| Static server (node:test) | 5 passed |
+| Real Chromium | offline reload, update to a new build, reset: pass |
+| Linters, mypy, Bandit, tsc, ESLint, `pip-audit`, `npm audit` | clean |

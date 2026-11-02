@@ -1,5 +1,6 @@
 import type { Strings } from "@/lib/i18n";
 import type { Currency } from "@/lib/markets";
+import type { OfflineState } from "./useOffline";
 
 export type Theme = "auto" | "light" | "dark";
 
@@ -11,6 +12,8 @@ interface Props {
   onReset: () => void;
   eco: boolean;
   onEco: (v: boolean) => void;
+  offline: OfflineState;
+  onOfflineReset: () => void;
   t: Strings;
   markets: string[]; // available in the data
   selectedMarkets: ReadonlySet<string>;
@@ -24,7 +27,7 @@ interface Props {
 }
 
 export function SettingsTab({
-  costShare, onCost, theme, onTheme, onReset, eco, onEco, t,
+  costShare, onCost, theme, onTheme, onReset, eco, onEco, offline, onOfflineReset, t,
   markets, selectedMarkets, onToggleMarket, chains, selectedChains, onToggleChain, currencies, selectedCurrencies, onToggleCurrency,
 }: Props) {
   return (
@@ -87,6 +90,16 @@ export function SettingsTab({
         <button type="button" className="btn" onClick={onReset}>{t.resetSettings}</button>
         <p className="hint">{t.settingsSaved}</p>
       </div>
+    </section>
+    <section aria-labelledby="off-h" className="card">
+      <h2 id="off-h">{t.offlineTitle}</h2>
+      <p className="hint">{t.offlineHint}</p>
+      <p role="status">
+        {{ ready: t.offlineReady, pending: t.offlinePending, off: t.offlineOff, unsupported: t.offlineUnsupported }[offline]}
+      </p>
+      {offline === "ready" && (
+        <button type="button" className="btn" onClick={onOfflineReset}>{t.offlineReset}</button>
+      )}
     </section>
     </>
   );

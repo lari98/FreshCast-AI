@@ -130,3 +130,45 @@ describe("one broken tab does not break the dashboard", () => {
     spy.mockRestore();
   });
 });
+
+describe("offline use", () => {
+  afterEach(() => { Reflect.deleteProperty(navigator, "serviceWorker"); vi.unstubAllEnvs(); });
+
+  it("tells the user when the browser has no network and when it is back", async () => {
+    render(<Dashboard load={async () => data} loadReplay={async () => replay} />);
+    await screen.findByRole("tablist");
+    act(() => { window.dispatchEvent(new Event("offline")); });
+    expect(screen.getByText(/Sie sind offline/)).toBeInTheDocument();
+    act(() => { window.dispatchEvent(new Event("online")); });
+    expect(screen.queryByText(/Sie sind offline/)).toBeNull();
+  });
+
+  it("registers the worker in a finished build, shows it is ready and can remove the offline copy", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const unregister = vi.fn(async () => true);
+    const deleted: string[] = [];
+    const register = vi.fn(async () => ({}));
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { register, ready: Promise.resolve({}), getRegistrations: async () => [{ unregister }] },
+    });
+    vi.stubGlobal("caches", { keys: async () => ["freshcast-1", "other"], delete: async (n: string) => { deleted.push(n); return true; } });
+    render(<Dashboard load={async () => data} loadReplay={async () => replay} />);
+    await screen.findByRole("tablist");
+    await userEvent.click(screen.getByRole("tab", { name: "Einstellungen" }));
+    expect(await screen.findByText("Offline bereit")).toBeInTheDocument();
+    expect(register).toHaveBeenCalledWith("/sw.js", { scope: "/", updateViaCache: "none" });
+    await userEvent.click(screen.getByRole("button", { name: "Offline-Kopie löschen" }));
+    expect(await screen.findByText("Offline-Kopie entfernt")).toBeInTheDocument();
+    expect(unregister).toHaveBeenCalled();
+    expect(deleted).toEqual(["freshcast-1"]); // only its own cache
+    vi.unstubAllGlobals();
+  });
+
+  it("explains when offline use is unavailable (development build)", async () => {
+    render(<Dashboard load={async () => data} loadReplay={async () => replay} />);
+    await screen.findByRole("tablist");
+    await userEvent.click(screen.getByRole("tab", { name: "Einstellungen" }));
+    expect(await screen.findByText(/Offline-Nutzung ist hier nicht verfügbar/)).toBeInTheDocument();
+  });
+});

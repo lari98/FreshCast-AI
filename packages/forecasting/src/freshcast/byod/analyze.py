@@ -23,6 +23,7 @@ import pandas as pd
 
 from freshcast.assistant.facts import ExplanationFacts
 from freshcast.assistant.templates import render_template
+from freshcast.byod.forecast_cache import FORECASTS, frame_key
 from freshcast.byod.ingest import (
     IngestError,
     QualityReport,
@@ -100,10 +101,96 @@ def _num(value: Any, default: float) -> float:
     return default if value is None or pd.isna(value) else float(value)
 
 
+def per_store_default() -> bool:
+    """Per-store training is on when ``FRESHCAST_PER_STORE`` is 1/true/yes/on."""
+    return os.environ.get("FRESHCAST_PER_STORE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _forecast_group(
+    known: pd.DataFrame,
+    ahead: pd.DataFrame,
+    cut: pd.Timestamp,
+    start: pd.Timestamp,
+    cal_days: int,
+) -> pd.DataFrame:
+    """Train on one group of stores and return its history and future forecasts."""
+    key = frame_key(
+        pd.concat([known, ahead], ignore_index=True), str(cut), str(start), cal_days
+    )
+    cached = FORECASTS.get(key)
+    if cached is not None:
+        return cached
+    threads = worker_threads()
+    hist_model = DemandForecaster(calibration_days=cal_days, n_jobs=threads).fit(
+        known[known["business_date"] < cut]
+    )
+    now_model = DemandForecaster(calibration_days=cal_days, n_jobs=threads).fit(known)
+    hist = known[known["business_date"] >= start].copy()
+    hist[["point", "lower", "upper"]] = hist_model.predict(hist)
+    fut = ahead.copy()
+    fut[["point", "lower", "upper"]] = now_model.predict(fut)
+    out = pd.concat([hist, fut])
+    FORECASTS.put(key, out)
+    return out
+
+
+def _forecast(
+    known: pd.DataFrame,
+    ahead: pd.DataFrame,
+    cut: pd.Timestamp,
+    start: pd.Timestamp,
+    cal_days: int,
+    per_store: bool,
+) -> pd.DataFrame:
+    """Forecast all series, either with one shared model or one model per store.
+
+    A store whose own history is too short for a model of its own is trained
+    together with the other such stores instead of failing the whole upload.
+    """
+    try:
+        if not per_store or known["store_id"].nunique() < 2:
+            parts = [_forecast_group(known, ahead, cut, start, cal_days)]
+        else:
+            parts, rest = [], []
+            for store in sorted(known["store_id"].unique()):
+                k = known[known["store_id"] == store]
+                a = ahead[ahead["store_id"] == store]
+                try:
+                    parts.append(_forecast_group(k, a, cut, start, cal_days))
+                except ValueError:
+                    rest.append(store)
+            if rest:
+                parts.append(
+                    _forecast_group(
+                        known[known["store_id"].isin(rest)],
+                        ahead[ahead["store_id"].isin(rest)],
+                        cut,
+                        start,
+                        cal_days,
+                    )
+                )
+    except ValueError as exc:
+        raise IngestError([f"history too short to train a model: {exc}"]) from exc
+    return pd.concat(parts).sort_values("business_date")
+
+
 def analyze(
-    sales_csv: bytes, stock_csv: bytes | None = None, as_of: date | None = None
+    sales_csv: bytes,
+    stock_csv: bytes | None = None,
+    as_of: date | None = None,
+    per_store: bool | None = None,
 ) -> dict[str, Any]:
-    """Return a dashboard payload for the uploaded files (raises IngestError)."""
+    """Return a dashboard payload for the uploaded files (raises IngestError).
+
+    ``per_store`` trains one model per store and remembers each store's forecast, so a
+    later upload that changes one store retrains only that store. ``None`` follows
+    ``FRESHCAST_PER_STORE`` (see :func:`per_store_default`).
+    """
     panel, report, as_of_date = clean_sales(read_csv_bytes(sales_csv, "sales"), as_of)
 
     stock = pd.DataFrame()
@@ -151,26 +238,11 @@ def analyze(
             "calibrated and are probably too narrow"
         )
     known = feats[feats["business_date"] < pd.Timestamp(as_of_date)]
+    ahead_feats = feats[feats["business_date"] >= pd.Timestamp(as_of_date)]
     cut = pd.Timestamp(as_of_date - timedelta(days=HISTORY_DAYS + HORIZON))
-    try:
-        threads = worker_threads()
-        hist_model = DemandForecaster(calibration_days=cal_days, n_jobs=threads).fit(
-            known[known["business_date"] < cut]
-        )
-        now_model = DemandForecaster(calibration_days=cal_days, n_jobs=threads).fit(
-            known
-        )
-    except ValueError as exc:
-        raise IngestError([f"history too short to train a model: {exc}"]) from exc
-
-    hist = known[
-        known["business_date"]
-        >= pd.Timestamp(as_of_date - timedelta(days=HISTORY_DAYS))
-    ].copy()
-    hist[["point", "lower", "upper"]] = hist_model.predict(hist)
-    ahead = feats[feats["business_date"] >= pd.Timestamp(as_of_date)].copy()
-    ahead[["point", "lower", "upper"]] = now_model.predict(ahead)
-    window = pd.concat([hist, ahead]).sort_values("business_date")
+    start = pd.Timestamp(as_of_date - timedelta(days=HISTORY_DAYS))
+    use_per_store = per_store_default() if per_store is None else per_store
+    window = _forecast(known, ahead_feats, cut, start, cal_days, use_per_store)
 
     # Split once per series instead of filtering the big frames 300 times.
     keys = ["store_id", "sku"]

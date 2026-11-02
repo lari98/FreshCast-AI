@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.0 – 2026-11-02 – offline use and per-store forecast caching
+
+Details: [docs/releases/v0.4.0.md](docs/releases/v0.4.0.md), benchmark: [docs/ml/per-store-forecast.md](docs/ml/per-store-forecast.md).
+
+- Offline dashboard (service worker): opens without internet after the first visit; build-specific cache replaced on every update; `version.json` never cached so live update still works; status in Einstellungen with "delete offline copy"; offline banner. Verified in real Chromium (offline reload, update to a new build, reset).
+- Per-store forecast cache (optional, `FRESHCAST_PER_STORE=1`): a re-upload with one changed store takes 14.5 s instead of 33.0 s; off by default because accuracy is slightly lower (WAPE 0.2769 against 0.2713).
+- Version guard test: `VERSION`, manifests, API and package version must agree.
+- Tests: core 178 (96.69 %), API 56 (96.52 %), dashboard 156, static server 5.
+
 ## v0.3.0 – 2026-11-02 – efficiency and resilience
 
 Details: [docs/releases/v0.3.0.md](docs/releases/v0.3.0.md), measurements: [docs/quality/efficiency.md](docs/quality/efficiency.md).

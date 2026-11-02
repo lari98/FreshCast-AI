@@ -88,3 +88,30 @@ def test_large_answers_are_compressed(client: TestClient) -> None:
 def test_readiness_checks_the_database(client: TestClient) -> None:
     assert client.get("/health").json() == {"status": "ok"}
     assert client.get("/health/ready").json() == {"status": "ready"}
+
+
+def test_per_store_mode_can_be_switched_on_by_setting() -> None:
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    from freshcast_api.config import Settings
+    from freshcast_api.db import Base
+    from freshcast_api.main import create_app
+
+    engine = create_engine(
+        "sqlite+pysqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    settings = Settings(
+        env="local", database_url="sqlite+pysqlite://", analyze_per_store=True
+    )
+    with TestClient(create_app(settings, engine)) as c:
+        with patch("freshcast_api.routers.analyze.analyze") as spy:
+            spy.return_value = {"items": []}
+            assert (
+                c.post("/v1/analyze", files=_files(), headers=MANAGER).status_code
+                == 200
+            )
+        assert spy.call_args.args[3] is True
